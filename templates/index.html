@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}ServiHogar Durango - Servicios para el hogar{% endblock %}
+
+{% block contenido %}
+<section class="hero">
+    <h1>Tu hogar en buenas manos</h1>
+    <p>Servicios confiables, rápidos y seguros para tu casa u oficina en Durango.</p>
+    <a href="{{ url_for('cotizar') }}" class="boton boton-primario">Solicitar cotización</a>
+</section>
+
+<section id="servicios" class="seccion">
+    <h2>Nuestros servicios</h2>
+    <div class="rejilla-servicios">
+        {% for servicio in servicios %}
+        <div class="tarjeta-servicio">
+            <h3>{{ servicio.nombre }}</h3>
+            <p>{{ servicio.descripcion }}</p>
+            <p class="precio">Desde ${{ "%.0f"|format(servicio.precio_aproximado) }}</p>
+            <a href="{{ url_for('cotizar') }}" class="boton boton-secundario">Cotizar</a>
+        </div>
+        {% else %}
+        <p>Todavía no hay servicios cargados. Ejecuta <code>python seed_datos.py</code> para agregar ejemplos.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="seccion resenas">
+    <h2>Lo que dicen nuestros clientes</h2>
+    <blockquote>"Excelente atención, el especialista llegó puntual." — Cliente A</blockquote>
+    <blockquote>"Muy buen servicio de limpieza, quedó impecable." — Cliente B</blockquote>
+    <p class="nota-entregable">
+        (Las reseñas mostradas aquí son de ejemplo. En el Entregable 2 se cargarán dinámicamente
+        desde la tabla <code>resenas</code>.)
+    </p>
+</section>
+{% endblock %}

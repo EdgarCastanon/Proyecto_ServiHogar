@@ -1,0 +1,171 @@
+:root {
+    --azul: #1f4e79;
+    --azul-claro: #2980b9;
+    --naranja: #e67e22;
+    --gris-claro: #f4f6f8;
+    --texto: #2c3e50;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: var(--gris-claro);
+    color: var(--texto);
+}
+
+/* ---------- Barra de navegación ---------- */
+.barra-nav {
+    background: var(--azul);
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.marca {
+    color: white;
+    font-weight: bold;
+    font-size: 1.3em;
+    text-decoration: none;
+}
+
+.marca span { color: var(--naranja); }
+
+.barra-nav nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 18px;
+    font-size: 0.95em;
+}
+
+.barra-nav nav a:hover { text-decoration: underline; }
+
+.boton-nav {
+    background: var(--naranja);
+    padding: 8px 16px;
+    border-radius: 5px;
+}
+
+.boton-nav:hover { text-decoration: none !important; background: #d35400; }
+
+/* ---------- Hero ---------- */
+.hero {
+    background: linear-gradient(135deg, var(--azul) 0%, var(--azul-claro) 100%);
+    color: white;
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.hero h1 { font-size: 2.2em; margin-bottom: 10px; }
+.hero p { font-size: 1.1em; margin-bottom: 25px; }
+
+/* ---------- Botones ---------- */
+.boton {
+    display: inline-block;
+    padding: 12px 24px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.boton-primario { background: var(--naranja); color: white; }
+.boton-primario:hover { background: #d35400; }
+
+.boton-secundario { background: var(--azul-claro); color: white; margin-top: 10px; }
+.boton-secundario:hover { background: #21618c; }
+
+/* ---------- Secciones ---------- */
+.seccion { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+.seccion h2 { color: var(--azul); text-align: center; margin-bottom: 25px; }
+
+.rejilla-servicios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+
+.tarjeta-servicio {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.tarjeta-servicio h3 { color: var(--azul); }
+.tarjeta-servicio .precio { font-weight: bold; color: var(--naranja); margin: 10px 0; }
+
+.resenas blockquote {
+    background: white;
+    border-left: 4px solid var(--naranja);
+    padding: 12px 18px;
+    margin: 12px 0;
+    font-style: italic;
+    border-radius: 4px;
+}
+
+.nota-entregable {
+    background: #fff3cd;
+    color: #856404;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+/* ---------- Formulario ---------- */
+.contenedor-formulario {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+label {
+    display: block;
+    font-weight: bold;
+    margin-top: 18px;
+    margin-bottom: 6px;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-family: inherit;
+}
+
+.fila-doble {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.aviso {
+    background: #eef6ff;
+    border: 1px solid #cfe2ff;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 20px 0;
+    font-size: 0.9em;
+}
+
+button[type="submit"] {
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    margin-top: 10px;
+}
+
+/* ---------- Pie de página ---------- */
+.pie-pagina {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+    font-size: 0.85em;
+}
