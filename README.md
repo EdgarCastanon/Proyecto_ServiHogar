@@ -1,4 +1,8 @@
 # Proyecto ServiHogar Durango
+Equipo: 
+Castañón Galván Edgar Ailton
+Pulgarín Flores Yosef Enrique 
+Ramírez Campos Jesús Alejandro
 
 Plataforma web para cotizar, contratar y dar seguimiento a servicios para el hogar
 (Plomería, Electricidad, Limpieza), con roles de Prospecto, Cliente, Especialista,
