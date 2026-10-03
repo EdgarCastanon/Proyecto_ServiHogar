@@ -4,13 +4,8 @@
 {% block contenido %}
 <section class="seccion contenedor-formulario">
     <h1>Solicitar cotización</h1>
-    <p class="nota-entregable">
-        Entregable 1: este formulario es solo de interfaz (maqueta funcional). El guardado en la
-        base de datos y la creación automática de la cuenta de Cliente se implementarán en el
-        Entregable 2.
-    </p>
 
-    <form action="#" method="POST">
+    <form action="{{ url_for('cotizar') }}" method="POST">
         <label for="nombre">Nombre completo</label>
         <input type="text" id="nombre" name="nombre" required>
 
@@ -36,8 +31,9 @@
         <textarea id="descripcion" name="descripcion" rows="4"></textarea>
 
         <div class="aviso">
-            Al enviar, se creará tu cuenta de Cliente. Tu correo y teléfono serán tu usuario y
-            contraseña inicial (podrás cambiarla después desde tu portal).
+            Al enviar, se creará tu cuenta de Cliente (si es tu primera vez). Tu correo y tu
+            número de teléfono serán tu usuario y contraseña inicial; podrás cambiarla después
+            desde tu portal.
         </div>
 
         <button type="submit" class="boton boton-primario">Enviar solicitud y recibir cotización</button>

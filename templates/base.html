@@ -12,17 +12,36 @@
         <nav>
             <a href="{{ url_for('inicio') }}">Inicio</a>
             <a href="{{ url_for('inicio') }}#servicios">Servicios</a>
-            <a href="{{ url_for('cotizar') }}" class="boton-nav">Solicitar cotización</a>
-            <a href="#" class="enlace-secundario">Iniciar sesión</a>
+
+            {% if session.get('usuario_id') %}
+                {% if session.get('rol') == 'especialista' %}
+                    <a href="{{ url_for('panel_especialista') }}">Mi panel</a>
+                {% else %}
+                    <a href="{{ url_for('portal_cliente') }}">Mi portal</a>
+                {% endif %}
+                <span>Hola, {{ session.get('nombre') }}</span>
+                <a href="{{ url_for('logout') }}" class="enlace-secundario">Cerrar sesión</a>
+            {% else %}
+                <a href="{{ url_for('cotizar') }}" class="boton-nav">Solicitar cotización</a>
+                <a href="{{ url_for('login') }}" class="enlace-secundario">Iniciar sesión</a>
+            {% endif %}
         </nav>
     </header>
 
     <main>
+        {% if get_flashed_messages() %}
+        <div class="contenedor-mensajes">
+            {% for categoria, mensaje in get_flashed_messages(with_categories=true) %}
+            <div class="mensaje {{ categoria }}">{{ mensaje }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         {% block contenido %}{% endblock %}
     </main>
 
     <footer class="pie-pagina">
-        <p>ServiHogar Durango &mdash; Proyecto académico de Programación / Desarrollo Web (Entregable 1).</p>
+        <p>ServiHogar Durango &mdash; Proyecto académico de Programación / Desarrollo Web (Entregable 2).</p>
     </footer>
 </body>
 </html>

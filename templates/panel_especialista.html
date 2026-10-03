@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block titulo %}Mi panel - ServiHogar Durango{% endblock %}
+
+{% block contenido %}
+<section class="seccion">
+    <h1>Mis servicios asignados</h1>
+
+    {% if solicitudes %}
+        {% for s in solicitudes %}
+        <div class="tarjeta-solicitud">
+            <h3>Folio #{{ s.id }} &mdash; {{ s.servicio.nombre }}</h3>
+            <p><strong>Cliente:</strong> {{ s.cliente.nombre }} ({{ s.cliente.telefono }})</p>
+            <p><strong>Descripción:</strong> {{ s.descripcion or "Sin descripción" }}</p>
+            <p><strong>Estatus actual:</strong>
+                <span class="etiqueta etiqueta-{{ s.estatus }}">{{ s.estatus }}</span>
+            </p>
+
+            {% if s.historial %}
+            <details>
+                <summary>Ver historial ({{ s.historial|length }})</summary>
+                <ul>
+                    {% for h in s.historial %}
+                    <li>{{ h.fecha.strftime("%d/%m/%Y %H:%M") }} &mdash;
+                        {{ h.estatus_anterior }} → {{ h.estatus_nuevo }}:
+                        {{ h.observaciones or "sin observaciones" }}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+
+            {% if s.estatus != "terminado" %}
+            <form action="{{ url_for('actualizar_solicitud', id_solicitud=s.id) }}" method="POST" class="formulario-inline">
+                <label for="estatus-{{ s.id }}">Actualizar estatus</label>
+                <select id="estatus-{{ s.id }}" name="estatus">
+                    <option value="en_proceso" {% if s.estatus == "en_proceso" %}selected{% endif %}>En proceso</option>
+                    <option value="terminado">Terminado</option>
+                </select>
+
+                <label for="obs-{{ s.id }}">Observaciones</label>
+                <textarea id="obs-{{ s.id }}" name="observaciones" rows="2" placeholder="¿Qué avance tuviste hoy?"></textarea>
+
+                <button type="submit" class="boton boton-secundario">Guardar avance</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+    <p>Todavía no tienes servicios asignados.</p>
+    {% endif %}
+</section>
+{% endblock %}

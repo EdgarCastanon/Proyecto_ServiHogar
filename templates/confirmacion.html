@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Cotización recibida - ServiHogar Durango{% endblock %}
+
+{% block contenido %}
+<section class="seccion contenedor-formulario">
+    <h1>¡Gracias, {{ usuario.nombre }}!</h1>
+    <p>Tu solicitud de <strong>{{ solicitud.servicio.nombre }}</strong> fue registrada con el folio
+       <strong>#{{ solicitud.id }}</strong>.</p>
+
+    {% if solicitud.especialista %}
+        <div class="aviso aviso-exito">
+            Ya se asignó automáticamente a <strong>{{ solicitud.especialista.nombre }}</strong> para
+            atender tu servicio. Estatus actual: <strong>{{ solicitud.estatus }}</strong>.
+        </div>
+    {% else %}
+        <div class="aviso">
+            Por el momento no hay especialistas disponibles para este servicio; tu solicitud
+            quedó como <strong>{{ solicitud.estatus }}</strong> y será atendida en cuanto haya
+            disponibilidad.
+        </div>
+    {% endif %}
+
+    {% if contrasena_generada %}
+    <div class="aviso aviso-credenciales">
+        <h3>Tu cuenta fue creada</h3>
+        <p><strong>Usuario (correo):</strong> {{ usuario.correo }}</p>
+        <p><strong>Contraseña inicial:</strong> {{ contrasena_generada }}</p>
+        <p class="nota-entregable">
+            Nota del Entregable 2: en una versión posterior esta contraseña se enviará por
+            correo electrónico en lugar de mostrarse en pantalla; por ahora se muestra aquí
+            para fines de prueba.
+        </p>
+    </div>
+    {% else %}
+    <p>Usa tu cuenta ya existente (correo y contraseña) para iniciar sesión y dar seguimiento.</p>
+    {% endif %}
+
+    <p>
+        <a href="{{ url_for('login') }}" class="boton boton-primario">Iniciar sesión y ver mi portal</a>
+    </p>
+</section>
+{% endblock %}
