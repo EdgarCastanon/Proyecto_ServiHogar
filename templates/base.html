@@ -16,6 +16,8 @@
             {% if session.get('usuario_id') %}
                 {% if session.get('rol') == 'especialista' %}
                     <a href="{{ url_for('panel_especialista') }}">Mi panel</a>
+                {% elif session.get('rol') in ['analista', 'administrador'] %}
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
                 {% else %}
                     <a href="{{ url_for('portal_cliente') }}">Mi portal</a>
                 {% endif %}
@@ -41,7 +43,9 @@
     </main>
 
     <footer class="pie-pagina">
-        <p>ServiHogar Durango &mdash; Proyecto académico de Programación / Desarrollo Web (Entregable 2).</p>
+        <p>ServiHogar Durango &mdash; Proyecto académico de Programación / Desarrollo Web (Entregable 3).</p>
     </footer>
+
+    {% block scripts %}{% endblock %}
 </body>
 </html>

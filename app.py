@@ -23,11 +23,16 @@ DB_PORT = os.environ.get("POSTGRES_PORT", "5432")
 DB_USER = os.environ.get("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "")
 DB_NAME = os.environ.get("POSTGRES_DATABASE", "servihogar")
+DB_SSL_CA = os.environ.get("POSTGRES_SSL_CA", "")  # solo se usa en la nube (Aiven)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = (
-    f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-)
+uri = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+app.config["SQLALCHEMY_DATABASE_URI"] = uri
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+if DB_SSL_CA:
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {"sslmode": "verify-ca", "sslrootcert": DB_SSL_CA}
+    }
 
 db.init_app(app)
 
@@ -37,9 +42,11 @@ def crear_base_datos_si_no_existe():
     que crearla manualmente desde pgAdmin antes de correr la app)."""
     import psycopg2
     try:
-        conexion = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, dbname="postgres"
-        )
+        parametros = dict(host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, dbname="postgres")
+        if DB_SSL_CA:
+            parametros["sslmode"] = "verify-ca"
+            parametros["sslrootcert"] = DB_SSL_CA
+        conexion = psycopg2.connect(**parametros)
         conexion.autocommit = True
         cursor = conexion.cursor()
         cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (DB_NAME,))
@@ -308,6 +315,53 @@ def actualizar_solicitud(id_solicitud):
     db.session.commit()
     flash("Avance registrado correctamente.", "success")
     return redirect(url_for("panel_especialista"))
+
+
+# ==========================================================
+# DASHBOARD EJECUTIVO (Analista/Gerente y Administrador)
+# ==========================================================
+@app.route("/dashboard")
+@rol_requerido("analista", "administrador")
+def dashboard():
+    conteos = {
+        estatus: SolicitudServicio.query.filter_by(estatus=estatus).count()
+        for estatus in SolicitudServicio.ESTATUS
+    }
+
+    por_servicio = (
+        db.session.query(Servicio.nombre, db.func.count(SolicitudServicio.id))
+        .join(SolicitudServicio, SolicitudServicio.id_servicio == Servicio.id)
+        .group_by(Servicio.nombre)
+        .all()
+    )
+
+    especialistas_calificacion = (
+        db.session.query(
+            Usuario.nombre,
+            db.func.avg(Resena.calificacion).label("promedio"),
+            db.func.count(Resena.id).label("total_resenas"),
+        )
+        .join(SolicitudServicio, SolicitudServicio.id_especialista == Usuario.id)
+        .join(Resena, Resena.id_solicitud == SolicitudServicio.id)
+        .group_by(Usuario.nombre)
+        .order_by(db.desc("promedio"))
+        .all()
+    )
+
+    solicitudes_recientes = (
+        SolicitudServicio.query
+        .order_by(SolicitudServicio.fecha_creacion.desc())
+        .limit(10)
+        .all()
+    )
+
+    return render_template(
+        "dashboard.html",
+        conteos=conteos,
+        por_servicio=por_servicio,
+        especialistas_calificacion=especialistas_calificacion,
+        solicitudes_recientes=solicitudes_recientes,
+    )
 
 
 if __name__ == "__main__":

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard ejecutivo - ServiHogar Durango{% endblock %}
+
+{% block contenido %}
+<section class="seccion">
+    <h1>Dashboard ejecutivo</h1>
+
+    <div class="rejilla-indicadores">
+        <div class="tarjeta-indicador tarjeta-cotizado">
+            <span class="numero-indicador">{{ conteos.cotizado }}</span>
+            <span>Cotizados</span>
+        </div>
+        <div class="tarjeta-indicador tarjeta-contratado">
+            <span class="numero-indicador">{{ conteos.contratado }}</span>
+            <span>Contratados</span>
+        </div>
+        <div class="tarjeta-indicador tarjeta-en_proceso">
+            <span class="numero-indicador">{{ conteos.en_proceso }}</span>
+            <span>En proceso</span>
+        </div>
+        <div class="tarjeta-indicador tarjeta-terminado">
+            <span class="numero-indicador">{{ conteos.terminado }}</span>
+            <span>Terminados</span>
+        </div>
+    </div>
+
+    <div class="rejilla-dos-columnas">
+        <div class="panel-dashboard">
+            <h2>Servicios más solicitados</h2>
+            <canvas id="graficaServicios"></canvas>
+        </div>
+
+        <div class="panel-dashboard">
+            <h2>Especialistas mejor calificados</h2>
+            {% if especialistas_calificacion %}
+            <table class="tabla-datos">
+                <thead><tr><th>Especialista</th><th>Promedio</th><th>Reseñas</th></tr></thead>
+                <tbody>
+                    {% for nombre, promedio, total in especialistas_calificacion %}
+                    <tr>
+                        <td>{{ nombre }}</td>
+                        <td>{{ "%.1f"|format(promedio) }} / 5</td>
+                        <td>{{ total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>Todavía no hay reseñas registradas.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <h2>Solicitudes recientes</h2>
+    <table class="tabla-datos">
+        <thead>
+            <tr><th>Folio</th><th>Cliente</th><th>Servicio</th><th>Especialista</th><th>Estatus</th><th>Fecha</th></tr>
+        </thead>
+        <tbody>
+            {% for s in solicitudes_recientes %}
+            <tr>
+                <td>#{{ s.id }}</td>
+                <td>{{ s.cliente.nombre }}</td>
+                <td>{{ s.servicio.nombre }}</td>
+                <td>{{ s.especialista.nombre if s.especialista else "Sin asignar" }}</td>
+                <td><span class="etiqueta etiqueta-{{ s.estatus }}">{{ s.estatus }}</span></td>
+                <td>{{ s.fecha_creacion.strftime("%d/%m/%Y") }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6">Todavía no hay solicitudes registradas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+    const ctx = document.getElementById('graficaServicios');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for nombre, total in por_servicio %}"{{ nombre }}",{% endfor %}],
+            datasets: [{
+                label: 'Solicitudes',
+                data: [{% for nombre, total in por_servicio %}{{ total }},{% endfor %}],
+                backgroundColor: '#2980b9'
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+</script>
+{% endblock %}

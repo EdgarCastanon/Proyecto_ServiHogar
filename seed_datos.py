@@ -71,3 +71,26 @@ with app.app_context():
         print("Especialistas de ejemplo insertados correctamente (contraseña: especialista123).")
     else:
         print("Ya existen especialistas registrados; no se insertaron duplicados.")
+
+    # ---------------- Analista/Gerente y Administrador de ejemplo ----------------
+    # Contraseña de prueba para ambos: "gerente123"
+    gerencia_ejemplo = [
+        ("Laura Méndez", "laura.mendez@servihogar.com", "6181234510", "analista"),
+        ("Rubén Pizarro", "admin@servihogar.com", "6181234511", "administrador"),
+    ]
+
+    if Usuario.query.filter_by(correo="admin@servihogar.com").first() is None:
+        for nombre, correo, telefono, rol in gerencia_ejemplo:
+            usuario = Usuario(
+                nombre=nombre,
+                correo=correo,
+                telefono=telefono,
+                password_hash=generate_password_hash("gerente123"),
+            )
+            db.session.add(usuario)
+            db.session.flush()
+            db.session.add(Perfil(id_usuario=usuario.id, rol=rol))
+        db.session.commit()
+        print("Usuarios de analista y administrador insertados (contraseña: gerente123).")
+    else:
+        print("Ya existen usuarios de gerencia; no se insertaron duplicados.")

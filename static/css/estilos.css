@@ -102,5 +102,22 @@ input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; bo
 .tarjeta-solicitud { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
 .tarjeta-solicitud h3 { color: var(--azul); margin-top: 0; }
 
+/* ---------- Dashboard ---------- */
+.rejilla-indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.tarjeta-indicador { background: white; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-top: 5px solid #ccc; display: flex; flex-direction: column; gap: 5px; }
+.tarjeta-indicador .numero-indicador { font-size: 2.2em; font-weight: bold; color: var(--azul); }
+.tarjeta-cotizado { border-top-color: #95a5a6; }
+.tarjeta-contratado { border-top-color: var(--azul-claro); }
+.tarjeta-en_proceso { border-top-color: var(--naranja); }
+.tarjeta-terminado { border-top-color: var(--verde); }
+
+.rejilla-dos-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+.panel-dashboard { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.panel-dashboard h2 { text-align: left; margin-top: 0; }
+
+@media (max-width: 700px) {
+    .rejilla-dos-columnas { grid-template-columns: 1fr; }
+}
+
 /* ---------- Pie de página ---------- */
 .pie-pagina { text-align: center; padding: 20px; color: #888; font-size: 0.85em; }
