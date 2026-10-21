@@ -1,18 +1,1 @@
-{% extends "base.html" %}
-{% block titulo %}Iniciar sesión - ServiHogar Durango{% endblock %}
-
-{% block contenido %}
-<section class="seccion contenedor-formulario">
-    <h1>Iniciar sesión</h1>
-    <form action="{{ url_for('login') }}" method="POST">
-        <label for="correo">Correo electrónico</label>
-        <input type="email" id="correo" name="correo" required autofocus>
-
-        <label for="password">Contraseña</label>
-        <input type="password" id="password" name="password" required>
-
-        <button type="submit" class="boton boton-primario">Entrar</button>
-    </form>
-    <p>¿Aún no tienes cuenta? <a href="{{ url_for('cotizar') }}">Solicita una cotización</a> para crearla automáticamente.</p>
-</section>
-{% endblock %}
+{% extends "base.html" %}{% block title %}Iniciar sesión | ServiHogar{% endblock %}{% block content %}<section class="form-page"><div class="container login-layout"><div class="login-side"><span class="eyebrow">QUÉ BUENO TENERTE DE VUELTA</span><h1>Todo tu hogar,<br><em>bajo control.</em></h1><p>Entra para revisar tus solicitudes, consultar avances y compartir tu experiencia.</p></div><form class="form-card login-card" method="post"><div class="form-card-heading"><span class="step-label">ACCESO A TU CUENTA</span><h2>Iniciar sesión</h2><p>Introduce tus datos para continuar.</p></div><label>Correo electrónico<input type="email" name="email" required autocomplete="email" placeholder="tu@correo.com"></label><label>Contraseña<input type="password" name="password" required autocomplete="current-password" placeholder="Tu contraseña"></label><button class="btn btn-primary btn-wide" type="submit">Entrar <span>↗</span></button><p class="form-note">¿Primera vez aquí? <a href="{{ url_for('quote') }}">Solicita un servicio para crear tu cuenta.</a></p></form></div></section>{% endblock %}

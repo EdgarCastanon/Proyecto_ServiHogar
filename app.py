@@ -1,372 +1,272 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
 import os
-from functools import wraps
 from datetime import datetime
-from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from urllib.parse import urlparse
 
-from models import (
-    db, Servicio, Usuario, Perfil, EspecialistaHabilidad,
-    SolicitudServicio, HistorialEstatus, Resena
-)
+from dotenv import load_dotenv
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
-
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "clave-insegura-solo-para-desarrollo-local")
-
-# ==========================================================
-# CONFIGURACIÓN DE LA BASE DE DATOS (PostgreSQL)
-# ==========================================================
-DB_HOST = os.environ.get("POSTGRES_HOST", "localhost")
-DB_PORT = os.environ.get("POSTGRES_PORT", "5432")
-DB_USER = os.environ.get("POSTGRES_USER", "postgres")
-DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "")
-DB_NAME = os.environ.get("POSTGRES_DATABASE", "servihogar")
-DB_SSL_CA = os.environ.get("POSTGRES_SSL_CA", "")  # solo se usa en la nube (Aiven)
-
-uri = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-app.config["SQLALCHEMY_DATABASE_URI"] = uri
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-only-change-this-key")
+database_url = os.getenv("DATABASE_URL", "sqlite:///servihogar_local.db")
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+if database_url.startswith("postgresql"):
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
+db = SQLAlchemy(app)
 
-if DB_SSL_CA:
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "connect_args": {"sslmode": "verify-ca", "sslrootcert": DB_SSL_CA}
-    }
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(180), unique=True, nullable=False, index=True)
+    phone = db.Column(db.String(30), nullable=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(30), nullable=False, default="cliente")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    requests = db.relationship("ServiceRequest", backref="customer", foreign_keys="ServiceRequest.customer_id", lazy=True)
 
-db.init_app(app)
+class Service(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=False)
+    starting_price = db.Column(db.Numeric(10, 2), nullable=False, default=0)
+    icon = db.Column(db.String(10), nullable=False, default="🏠")
 
+class ServiceRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    service_id = db.Column(db.Integer, db.ForeignKey("service.id"), nullable=False)
+    specialist_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    address = db.Column(db.String(250), nullable=False)
+    details = db.Column(db.Text, nullable=False)
+    preferred_date = db.Column(db.String(30), nullable=True)
+    status = db.Column(db.String(30), nullable=False, default="Recibida")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    service = db.relationship("Service")
+    specialist = db.relationship("User", foreign_keys=[specialist_id])
 
-def crear_base_datos_si_no_existe():
-    """Crea la base de datos del proyecto si todavía no existe (evita tener
-    que crearla manualmente desde pgAdmin antes de correr la app)."""
-    import psycopg2
-    try:
-        parametros = dict(host=DB_HOST, port=DB_PORT, user=DB_USER, password=DB_PASSWORD, dbname="postgres")
-        if DB_SSL_CA:
-            parametros["sslmode"] = "verify-ca"
-            parametros["sslrootcert"] = DB_SSL_CA
-        conexion = psycopg2.connect(**parametros)
-        conexion.autocommit = True
-        cursor = conexion.cursor()
-        cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (DB_NAME,))
-        if not cursor.fetchone():
-            cursor.execute(f"CREATE DATABASE {DB_NAME}")
-            print(f"Base de datos '{DB_NAME}' creada automáticamente.")
-        cursor.close()
-        conexion.close()
-    except Exception as error:
-        print("Aviso al verificar/crear la base de datos:", error)
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(db.Integer, db.ForeignKey("service_request.id"), nullable=False, unique=True)
+    customer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    request = db.relationship("ServiceRequest")
 
+def current_user():
+    user_id = session.get("user_id")
+    return db.session.get(User, user_id) if user_id else None
 
-# ==========================================================
-# UTILIDADES DE SESIÓN Y ROLES
-# ==========================================================
-def login_required(vista):
-    @wraps(vista)
-    def envoltura(*args, **kwargs):
-        if "usuario_id" not in session:
-            flash("Debes iniciar sesión para continuar.", "error")
-            return redirect(url_for("login"))
-        return vista(*args, **kwargs)
-    return envoltura
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user():
+            flash("Inicia sesión para continuar.", "warning")
+            return redirect(url_for("login", next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
 
+def roles_required(*roles):
+    def decorator(view):
+        @wraps(view)
+        @login_required
+        def wrapped(*args, **kwargs):
+            user = current_user()
+            if user.role not in roles:
+                abort(403)
+            return view(*args, **kwargs)
+        return wrapped
+    return decorator
 
-def rol_requerido(*roles_permitidos):
-    def decorador(vista):
-        @wraps(vista)
-        def envoltura(*args, **kwargs):
-            if "usuario_id" not in session:
-                flash("Debes iniciar sesión para continuar.", "error")
-                return redirect(url_for("login"))
-            if session.get("rol") not in roles_permitidos:
-                flash("No tienes permiso para acceder a esta sección.", "error")
-                return redirect(url_for("inicio"))
-            return vista(*args, **kwargs)
-        return envoltura
-    return decorador
+@app.context_processor
+def inject_user():
+    return {"current_user": current_user()}
 
-
-def asignar_especialista(nombre_servicio):
-    """Busca, entre los especialistas disponibles para este tipo de servicio,
-    al que tenga mayor nivel de experiencia. Devuelve su id_usuario o None
-    si no hay nadie disponible en este momento."""
-    habilidad = (
-        EspecialistaHabilidad.query
-        .filter_by(tipo_servicio=nombre_servicio, disponible=True)
-        .order_by(EspecialistaHabilidad.nivel_experiencia.desc())
-        .first()
-    )
-    return habilidad.id_usuario if habilidad else None
-
-
-# ==========================================================
-# PÁGINAS PÚBLICAS (Prospecto)
-# ==========================================================
 @app.route("/")
-def inicio():
-    servicios = Servicio.query.all()
-    return render_template("index.html", servicios=servicios)
-
+def index():
+    services = Service.query.order_by(Service.id).all()
+    return render_template("index.html", services=services)
 
 @app.route("/cotizar", methods=["GET", "POST"])
-def cotizar():
-    servicios = Servicio.query.all()
-
+def quote():
+    services = Service.query.order_by(Service.name).all()
     if request.method == "POST":
-        nombre = request.form["nombre"].strip()
-        correo = request.form["correo"].strip().lower()
-        telefono = request.form["telefono"].strip()
-        id_servicio = int(request.form["servicio"])
-        descripcion = request.form.get("descripcion", "").strip()
-
-        servicio = Servicio.query.get_or_404(id_servicio)
-
-        # ¿Ya existe una cuenta con este correo? (alguien que vuelve a cotizar)
-        usuario = Usuario.query.filter_by(correo=correo).first()
-        contrasena_generada = None
-
-        if not usuario:
-            # El teléfono es la contraseña inicial, tal como pide el anteproyecto
-            contrasena_generada = telefono
-            usuario = Usuario(
-                nombre=nombre,
-                correo=correo,
-                telefono=telefono,
-                password_hash=generate_password_hash(contrasena_generada),
-            )
-            db.session.add(usuario)
-            db.session.flush()  # para obtener usuario.id antes del commit
-
-            perfil = Perfil(id_usuario=usuario.id, rol="cliente")
-            db.session.add(perfil)
-
-        id_especialista = asignar_especialista(servicio.nombre)
-
-        solicitud = SolicitudServicio(
-            id_cliente=usuario.id,
-            id_servicio=servicio.id,
-            id_especialista=id_especialista,
-            descripcion=descripcion,
-            estatus="contratado" if id_especialista else "cotizado",
-        )
-        db.session.add(solicitud)
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        service_id = request.form.get("service_id", type=int)
+        address = request.form.get("address", "").strip()
+        details = request.form.get("details", "").strip()
+        preferred_date = request.form.get("preferred_date", "").strip()
+        service = db.session.get(Service, service_id)
+        if not all([name, email, password, service, address, details]):
+            flash("Completa los campos obligatorios y selecciona un servicio válido.", "danger")
+            return render_template("cotizar.html", services=services)
+        if len(password) < 8:
+            flash("La contraseña debe tener al menos 8 caracteres.", "danger")
+            return render_template("cotizar.html", services=services)
+        user = User.query.filter_by(email=email).first()
+        if user and not session.get("user_id"):
+            flash("Ese correo ya tiene una cuenta. Inicia sesión para solicitar el servicio.", "warning")
+            return redirect(url_for("login"))
+        if not user:
+            user = User(name=name, email=email, phone=phone,
+                        password_hash=generate_password_hash(password), role="cliente")
+            db.session.add(user)
+            db.session.flush()
+        elif user.id != session.get("user_id"):
+            flash("Inicia sesión con el correo de esa cuenta para continuar.", "warning")
+            return redirect(url_for("login"))
+        req = ServiceRequest(customer_id=user.id, service_id=service.id, address=address,
+                             details=details, preferred_date=preferred_date, status="Recibida")
+        db.session.add(req)
         db.session.commit()
+        session["user_id"] = user.id
+        flash(f"Solicitud #{req.id} registrada correctamente.", "success")
+        return redirect(url_for("portal"))
+    return render_template("cotizar.html", services=services)
 
-        if id_especialista:
-            db.session.add(HistorialEstatus(
-                id_solicitud=solicitud.id,
-                estatus_anterior="cotizado",
-                estatus_nuevo="contratado",
-                observaciones="Especialista asignado automáticamente por el sistema.",
-            ))
-            db.session.commit()
-
-        return render_template(
-            "confirmacion.html",
-            usuario=usuario,
-            solicitud=solicitud,
-            contrasena_generada=contrasena_generada,
-        )
-
-    return render_template("cotizar.html", servicios=servicios)
-
-
-# ==========================================================
-# AUTENTICACIÓN
-# ==========================================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        correo = request.form["correo"].strip().lower()
-        password = request.form["password"]
-
-        usuario = Usuario.query.filter_by(correo=correo).first()
-        if usuario and check_password_hash(usuario.password_hash, password):
-            session["usuario_id"] = usuario.id
-            session["nombre"] = usuario.nombre
-            session["rol"] = usuario.perfil.rol if usuario.perfil else "cliente"
-            flash(f"Bienvenido, {usuario.nombre}.", "success")
-
-            if session["rol"] == "especialista":
-                return redirect(url_for("panel_especialista"))
-            return redirect(url_for("portal_cliente"))
-
-        flash("Correo o contraseña incorrectos.", "error")
-
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password_hash, password):
+            session.clear()
+            session["user_id"] = user.id
+            flash("Bienvenido de nuevo.", "success")
+            destination = "dashboard" if user.role in ("admin", "gerente", "analista") else ("especialista" if user.role == "especialista" else "portal")
+            return redirect(url_for(destination))
+        flash("Correo o contraseña incorrectos.", "danger")
     return render_template("login.html")
 
-
-@app.route("/logout")
+@app.route("/salir")
 def logout():
     session.clear()
-    flash("Sesión cerrada correctamente.", "success")
-    return redirect(url_for("login"))
+    flash("Sesión cerrada.", "info")
+    return redirect(url_for("index"))
 
-
-# ==========================================================
-# PORTAL DEL CLIENTE
-# ==========================================================
 @app.route("/portal")
-@rol_requerido("cliente")
-def portal_cliente():
-    solicitudes = (
-        SolicitudServicio.query
-        .filter_by(id_cliente=session["usuario_id"])
-        .order_by(SolicitudServicio.fecha_creacion.desc())
-        .all()
-    )
-    return render_template("portal_cliente.html", solicitudes=solicitudes)
+@roles_required("cliente")
+def portal():
+    user = current_user()
+    requests_list = ServiceRequest.query.filter_by(customer_id=user.id).order_by(ServiceRequest.created_at.desc()).all()
+    reviewed = {r.request_id for r in Review.query.filter_by(customer_id=user.id).all()}
+    return render_template("portal.html", requests_list=requests_list, reviewed=reviewed)
 
-
-@app.route("/portal/cambiar-password", methods=["GET", "POST"])
-@rol_requerido("cliente")
-def cambiar_password():
+@app.route("/resena/<int:request_id>", methods=["GET", "POST"])
+@roles_required("cliente")
+def review(request_id):
+    req = ServiceRequest.query.filter_by(id=request_id, customer_id=current_user().id).first_or_404()
+    if req.status != "Terminada":
+        flash("Solo puedes reseñar servicios terminados.", "warning")
+        return redirect(url_for("portal"))
+    if Review.query.filter_by(request_id=req.id).first():
+        flash("Esta solicitud ya tiene una reseña.", "info")
+        return redirect(url_for("portal"))
     if request.method == "POST":
-        actual = request.form["actual"]
-        nueva = request.form["nueva"]
-        confirmar = request.form["confirmar"]
-
-        usuario = Usuario.query.get(session["usuario_id"])
-
-        if not check_password_hash(usuario.password_hash, actual):
-            flash("La contraseña actual no es correcta.", "error")
-        elif nueva != confirmar:
-            flash("La nueva contraseña y su confirmación no coinciden.", "error")
-        elif len(nueva) < 4:
-            flash("La nueva contraseña debe tener al menos 4 caracteres.", "error")
+        rating = request.form.get("rating", type=int)
+        comment = request.form.get("comment", "").strip()
+        if rating not in range(1, 6) or not comment:
+            flash("Selecciona una calificación y escribe un comentario.", "danger")
         else:
-            usuario.password_hash = generate_password_hash(nueva)
+            db.session.add(Review(request_id=req.id, customer_id=current_user().id, rating=rating, comment=comment))
             db.session.commit()
-            flash("Contraseña actualizada correctamente.", "success")
-            return redirect(url_for("portal_cliente"))
+            flash("Gracias por compartir tu opinión.", "success")
+            return redirect(url_for("portal"))
+    return render_template("resena.html", req=req)
 
-    return render_template("cambiar_password.html")
-
-
-@app.route("/portal/resena/<int:id_solicitud>", methods=["GET", "POST"])
-@rol_requerido("cliente")
-def dejar_resena(id_solicitud):
-    solicitud = SolicitudServicio.query.get_or_404(id_solicitud)
-
-    if solicitud.id_cliente != session["usuario_id"]:
-        flash("Esa solicitud no pertenece a tu cuenta.", "error")
-        return redirect(url_for("portal_cliente"))
-
-    if solicitud.estatus != "terminado":
-        flash("Solo puedes dejar una reseña cuando el servicio esté terminado.", "error")
-        return redirect(url_for("portal_cliente"))
-
+@app.route("/especialista", methods=["GET", "POST"])
+@roles_required("especialista", "admin")
+def especialista():
+    user = current_user()
     if request.method == "POST":
-        calificacion = int(request.form["calificacion"])
-        comentario = request.form.get("comentario", "").strip()
-
-        if solicitud.resena:
-            solicitud.resena.calificacion = calificacion
-            solicitud.resena.comentario = comentario
-        else:
-            db.session.add(Resena(
-                id_solicitud=solicitud.id,
-                calificacion=calificacion,
-                comentario=comentario,
-            ))
+        req = db.session.get(ServiceRequest, request.form.get("request_id", type=int))
+        status = request.form.get("status", "")
+        if not req or status not in ("En proceso", "Terminada", "Cancelada"):
+            abort(400)
+        if user.role != "admin" and req.specialist_id != user.id:
+            abort(403)
+        req.status = status
         db.session.commit()
-        flash("¡Gracias por tu reseña!", "success")
-        return redirect(url_for("portal_cliente"))
+        flash("Estado actualizado.", "success")
+        return redirect(url_for("especialista"))
+    query = ServiceRequest.query.order_by(ServiceRequest.created_at.desc())
+    if user.role != "admin":
+        query = query.filter_by(specialist_id=user.id)
+    return render_template("especialista.html", requests_list=query.all())
 
-    return render_template("resena.html", solicitud=solicitud)
-
-
-# ==========================================================
-# PANEL DEL ESPECIALISTA
-# ==========================================================
-@app.route("/especialista")
-@rol_requerido("especialista")
-def panel_especialista():
-    solicitudes = (
-        SolicitudServicio.query
-        .filter_by(id_especialista=session["usuario_id"])
-        .order_by(SolicitudServicio.fecha_creacion.desc())
-        .all()
-    )
-    return render_template("panel_especialista.html", solicitudes=solicitudes)
-
-
-@app.route("/especialista/actualizar/<int:id_solicitud>", methods=["POST"])
-@rol_requerido("especialista")
-def actualizar_solicitud(id_solicitud):
-    solicitud = SolicitudServicio.query.get_or_404(id_solicitud)
-
-    if solicitud.id_especialista != session["usuario_id"]:
-        flash("Esa solicitud no está asignada a ti.", "error")
-        return redirect(url_for("panel_especialista"))
-
-    nuevo_estatus = request.form["estatus"]
-    observaciones = request.form.get("observaciones", "").strip()
-    estatus_anterior = solicitud.estatus
-
-    solicitud.estatus = nuevo_estatus
-    db.session.add(HistorialEstatus(
-        id_solicitud=solicitud.id,
-        estatus_anterior=estatus_anterior,
-        estatus_nuevo=nuevo_estatus,
-        observaciones=observaciones,
-    ))
-    db.session.commit()
-    flash("Avance registrado correctamente.", "success")
-    return redirect(url_for("panel_especialista"))
-
-
-# ==========================================================
-# DASHBOARD EJECUTIVO (Analista/Gerente y Administrador)
-# ==========================================================
-@app.route("/dashboard")
-@rol_requerido("analista", "administrador")
+@app.route("/dashboard", methods=["GET", "POST"])
+@roles_required("admin", "gerente", "analista")
 def dashboard():
-    conteos = {
-        estatus: SolicitudServicio.query.filter_by(estatus=estatus).count()
-        for estatus in SolicitudServicio.ESTATUS
+    if request.method == "POST":
+        req = db.session.get(ServiceRequest, request.form.get("request_id", type=int))
+        specialist_id = request.form.get("specialist_id", type=int)
+        specialist = User.query.filter_by(id=specialist_id, role="especialista").first()
+        if not req or not specialist:
+            flash("Selecciona una solicitud y un especialista válidos.", "danger")
+        else:
+            req.specialist_id = specialist.id
+            if req.status == "Recibida":
+                req.status = "Asignada"
+            db.session.commit()
+            flash("Especialista asignado correctamente.", "success")
+        return redirect(url_for("dashboard"))
+    all_requests = ServiceRequest.query.order_by(ServiceRequest.created_at.desc()).all()
+    specialists = User.query.filter_by(role="especialista").order_by(User.name).all()
+    counts = {
+        "total": ServiceRequest.query.count(),
+        "received": ServiceRequest.query.filter_by(status="Recibida").count(),
+        "progress": ServiceRequest.query.filter_by(status="En proceso").count(),
+        "done": ServiceRequest.query.filter_by(status="Terminada").count(),
+        "customers": User.query.filter_by(role="cliente").count(),
+        "specialists": len(specialists),
     }
+    reviews = Review.query.order_by(Review.created_at.desc()).limit(8).all()
+    return render_template("dashboard.html", requests_list=all_requests, specialists=specialists, counts=counts, reviews=reviews)
 
-    por_servicio = (
-        db.session.query(Servicio.nombre, db.func.count(SolicitudServicio.id))
-        .join(SolicitudServicio, SolicitudServicio.id_servicio == Servicio.id)
-        .group_by(Servicio.nombre)
-        .all()
-    )
+@app.route("/health")
+def health():
+    try:
+        db.session.execute(db.text("SELECT 1"))
+        return {"status": "ok", "database": "connected"}, 200
+    except Exception:
+        app.logger.exception("Health check: database unavailable")
+        return {"status": "error", "database": "unavailable"}, 503
 
-    especialistas_calificacion = (
-        db.session.query(
-            Usuario.nombre,
-            db.func.avg(Resena.calificacion).label("promedio"),
-            db.func.count(Resena.id).label("total_resenas"),
-        )
-        .join(SolicitudServicio, SolicitudServicio.id_especialista == Usuario.id)
-        .join(Resena, Resena.id_solicitud == SolicitudServicio.id)
-        .group_by(Usuario.nombre)
-        .order_by(db.desc("promedio"))
-        .all()
-    )
+@app.errorhandler(403)
+def forbidden(_error):
+    return render_template("error.html", code=403, message="No tienes permisos para ver esta sección."), 403
 
-    solicitudes_recientes = (
-        SolicitudServicio.query
-        .order_by(SolicitudServicio.fecha_creacion.desc())
-        .limit(10)
-        .all()
-    )
+@app.errorhandler(404)
+def not_found(_error):
+    return render_template("error.html", code=404, message="No encontramos la página que buscas."), 404
 
-    return render_template(
-        "dashboard.html",
-        conteos=conteos,
-        por_servicio=por_servicio,
-        especialistas_calificacion=especialistas_calificacion,
-        solicitudes_recientes=solicitudes_recientes,
-    )
+def seed_services():
+    defaults = [
+        ("Plomería", "Reparación de fugas, instalación y mantenimiento de tuberías.", 350, "🔧"),
+        ("Electricidad", "Instalaciones, revisión de cortos y mantenimiento eléctrico.", 400, "⚡"),
+        ("Limpieza", "Limpieza profunda y mantenimiento para tu hogar.", 300, "✨"),
+    ]
+    for name, description, price, icon in defaults:
+        if not Service.query.filter_by(name=name).first():
+            db.session.add(Service(name=name, description=description, starting_price=price, icon=icon))
+    db.session.commit()
 
+with app.app_context():
+    try:
+        db.create_all()
+        seed_services()
+    except Exception:
+        app.logger.exception("No fue posible inicializar la base de datos. Revisa DATABASE_URL.")
 
 if __name__ == "__main__":
-    crear_base_datos_si_no_existe()
-    with app.app_context():
-        db.create_all()
-    puerto = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=puerto, debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")
