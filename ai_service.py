@@ -37,7 +37,7 @@ def generate_reply(message: str, history: list[dict] | None = None) -> str:
     input_messages.append({"role": "user", "content": message[:1500]})
 
     response = client.responses.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-5.5"),
+        model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
         instructions=SYSTEM_INSTRUCTIONS,
         input=input_messages,
         max_output_tokens=350,
