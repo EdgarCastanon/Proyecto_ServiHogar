@@ -30,6 +30,7 @@ Docente: Rubén Pizarro Gurrola · Octubre de 2026
 - Dashboard para los roles internos existentes y asignación manual de especialistas.
 - Reseñas para solicitudes terminadas.
 - Endpoint `/health` para comprobar la conexión a la base de datos.
+- Servicio backend de IA en `ai_service.py`, ruta autenticada `/asistente-ia` e interfaz `templates/asistente_ia.html` (requiere API key y activación por entorno).
 - Diseño adaptable en HTML/CSS.
 
 La aplicación principal define los modelos `User`, `Service`, `ServiceRequest` y `Review` directamente en `app.py`. El archivo `models.py` contiene un esquema previo con nombres de tablas diferentes. **No ejecutes scripts antiguos de creación de datos sin comprobar primero sus importaciones y compatibilidad.**
@@ -149,6 +150,47 @@ Todas las cuentas demo usan la contraseña temporal indicada en `DEMO_PASSWORD`.
 ## Inteligencia artificial
 
 Consulta la guía paso a paso en [`docs/PLAN_IA.md`](docs/PLAN_IA.md). La integración de un modelo requiere una API key propia configurada como variable secreta, control de costos, validación del contenido y pruebas. Una función basada en reglas o una pantalla de chat no debe presentarse como un modelo de IA conectado.
+
+## Asistente de inteligencia artificial (OpenAI)
+
+Se añadió una primera integración de backend con la Responses API del SDK de OpenAI:
+- `ai_service.py`: llamada al modelo desde el servidor.
+- `/asistente-ia`: ruta protegida para usuarios que hayan iniciado sesión.
+- `templates/asistente_ia.html`: interfaz de conversación.
+- `.env.example`: variables necesarias.
+
+**La función permanece desactivada por defecto** (`AI_ENABLED=false`) y no funcionará hasta que configures una API key válida y habilites la variable. No se incluye ni se debe subir ninguna clave al repositorio.
+
+### Probar localmente
+
+1. Actualiza el repositorio e instala dependencias:
+   ```powershell
+   git pull origin main
+   pip install -r requirements.txt
+   ```
+2. Crea una API key desde la plataforma oficial de OpenAI: https://platform.openai.com/api-keys. La API tiene facturación y límites independientes de una suscripción de ChatGPT; revisa precios y establece límites de gasto antes de probar.
+3. Añade a tu archivo local `.env`:
+   ```env
+   AI_ENABLED=true
+   OPENAI_API_KEY=pega_tu_clave_aqui
+   OPENAI_MODEL=gpt-4.1-mini
+   ```
+4. Reinicia `python app.py`, inicia sesión y abre `/asistente-ia`.
+5. Prueba una pregunta sencilla y confirma que la respuesta se muestra. Si aparece un error, revisa la terminal; no publiques la clave ni logs con secretos.
+
+### Activar en Render
+
+En el servicio web de Render, entra en **Environment** y agrega `AI_ENABLED=true`, `OPENAI_API_KEY` (como valor secreto) y `OPENAI_MODEL=gpt-4.1-mini`. Guarda los cambios y deja que el servicio se reinicie. La disponibilidad del modelo depende de tu cuenta y de la API; si no está habilitado, elige un modelo al que tengas acceso.
+
+### Límites conocidos de la primera versión
+
+- El asistente orienta y ayuda a describir solicitudes; **no consulta la base de datos para verificar precios, disponibilidad o identidades**.
+- El historial conversacional es corto y se conserva en la sesión del navegador, no como historial permanente en la base de datos.
+- Hay una espera básica entre envíos por sesión, pero todavía falta un limitador de frecuencia robusto del lado del servidor, protección CSRF global, monitoreo de consumo y pruebas automatizadas.
+- No debe utilizarse para decisiones de seguridad ni para diagnósticos técnicos definitivos. No introduzcas datos personales innecesarios.
+- La aplicación sigue funcionando con IA desactivada.
+
+Consulta también `docs/PLAN_IA.md` para la hoja de ruta de funciones adicionales.
 
 ## Licencia
 
