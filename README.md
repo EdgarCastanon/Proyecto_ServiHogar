@@ -1,8 +1,8 @@
 # ServiHogar Durango
 
-Plataforma web académica para conectar clientes con especialistas de servicios domésticos en Durango. Stack actual: Python, Flask, Jinja, SQLAlchemy y PostgreSQL; despliegue previsto/actual en Render y base PostgreSQL configurada mediante variables de entorno.
+Plataforma web académica para conectar clientes con especialistas de servicios domésticos en Durango. Permite consultar servicios, registrar solicitudes, dar seguimiento a trabajos, administrar asignaciones y conversar con un asistente de inteligencia artificial.
 
-> **Estado del proyecto:** este repositorio contiene funcionalidades implementadas y propuestas de evolución. No marques una función como lista hasta probarla localmente y en el despliegue real. Revisa también el PDF de documentación académica del equipo.
+> **Estado de esta documentación:** describe la implementación encontrada en la rama `main`. La presencia de código no garantiza por sí sola que cada función esté configurada y probada en el servidor de producción. Las funciones que dependen de variables de entorno se indican expresamente.
 
 ## Equipo académico
 
@@ -18,68 +18,202 @@ Docente: Rubén Pizarro Gurrola · Octubre de 2026
 
 - Repositorio: https://github.com/EdgarCastanon/Proyecto_ServiHogar
 - Aplicación publicada: https://proyecto-servihogar.onrender.com/
-- Documentación técnica y académica: `docs/Documentacion_Final_ServiHogar_APA.pdf`
 
-## Funcionalidad que existe en la implementación Flask actual
+## Tecnologías utilizadas
 
-- Página pública y catálogo de servicios.
-- Registro de clientes al solicitar un servicio.
-- Inicio y cierre de sesión con contraseñas hasheadas.
-- Portal de cliente e historial de solicitudes.
-- Panel para especialistas con solicitudes asignadas y actualización de estado.
-- Panel administrativo para consultar todas las solicitudes, revisar datos del cliente, asignar especialistas y actualizar el estado de cada solicitud.
-- Reseñas para solicitudes terminadas.
-- Endpoint `/health` para comprobar la conexión a la base de datos.
-- Servicio backend de IA en `ai_service.py`, ruta autenticada `/asistente-ia` e interfaz `templates/asistente_ia.html` (requiere API key y activación por entorno).
-- Diseño adaptable en HTML/CSS.
+| Área | Tecnología | Función |
+|---|---|---|
+| Backend | Python | Lógica del servidor |
+| Framework web | Flask | Rutas, sesiones y control de acceso |
+| Plantillas | Jinja2, HTML | Páginas dinámicas |
+| Interfaz | CSS | Diseño y adaptación a pantallas |
+| Persistencia | Flask-SQLAlchemy / SQLAlchemy | Modelos y consultas |
+| Base de datos | PostgreSQL en despliegue; SQLite para desarrollo local | Usuarios, servicios, solicitudes, perfiles y reseñas |
+| Servidor de aplicación | Gunicorn | Ejecución de Flask en Render |
+| Hosting | Render | Publicación y variables de entorno |
+| Control de versiones | Git y GitHub | Código fuente y colaboración |
+| IA | Groq API y SDK de Python `groq` | Respuestas del asistente conversacional |
 
-La aplicación principal define los modelos `User`, `Service`, `ServiceRequest` y `Review` directamente en `app.py`. El archivo `models.py` contiene un esquema previo con nombres de tablas diferentes. **No ejecutes scripts antiguos de creación de datos sin comprobar primero sus importaciones y compatibilidad.**
+## Funcionalidades implementadas
 
-## Evolución propuesta
+### 1. Sitio público y catálogo de servicios
 
-### Registro y directorio de especialistas
+- Página de inicio de ServiHogar.
+- Catálogo inicial con Plomería, Electricidad y Limpieza.
+- Cada servicio incluye descripción, precio inicial e icono.
+- Acceso al formulario para solicitar/cotizar un servicio.
+- Directorio público de especialistas registrados.
 
-La propuesta amplía el perfil profesional con especialidades, años de experiencia, ciudad y biografía. Un formulario público puede facilitar el alta, pero en un sistema real la cuenta debe quedar pendiente de revisión antes de recibir trabajos. No se debe confiar en los datos declarados ni asignar automáticamente una cuenta no verificada.
+### 2. Clientes
 
-### Funciones siguientes recomendadas
+- Registro de cuenta al solicitar un servicio.
+- Inicio y cierre de sesión.
+- Contraseñas almacenadas mediante hash.
+- Formulario de solicitud con datos de contacto, servicio, dirección, descripción y fecha preferida.
+- Portal privado con historial y seguimiento de las solicitudes propias.
+- Posibilidad de dejar una reseña de 1 a 5 estrellas y comentario cuando la solicitud está terminada; se limita a una reseña por solicitud.
+- Acceso al asistente de IA después de iniciar sesión.
 
-1. Verificación y aprobación administrativa de especialistas.
-2. Habilidades normalizadas en una tabla relacionada, en lugar de texto libre.
-3. Disponibilidad por calendario y zonas de cobertura.
-4. Historial de estados y auditoría de quién realizó cada cambio.
-5. Recuperación de contraseña y verificación de correo.
-6. Protección CSRF, límites de intentos de inicio de sesión y validación de entradas.
-7. Migraciones de esquema con Flask-Migrate/Alembic.
-8. Pruebas automatizadas de rutas, roles, permisos y persistencia.
-9. Notificaciones por correo; WhatsApp/SMS y pagos quedan como integraciones posteriores.
-10. Funciones de IA documentadas en `docs/PLAN_IA.md`.
+### 3. Especialistas
 
-## Panel administrativo y datos de demostración
+- Registro de perfil profesional.
+- Datos de teléfono, ciudad, biografía, años de experiencia y especialidades.
+- Directorio público con perfiles registrados.
+- Panel privado para consultar solicitudes asignadas.
+- Actualización del estado de sus trabajos (En proceso, Terminada o Cancelada).
+- El especialista solo puede gestionar solicitudes asignadas a su propia cuenta.
 
-El panel administrativo está disponible en `/dashboard` para usuarios con rol `admin`, `gerente` o `analista`. Permite ver las solicitudes registradas, consultar los datos de contacto y descripción, asignar un especialista y actualizar el estado a Recibida, Aprobada, Rechazada, Asignada, En proceso, Terminada o Cancelada.
+### 4. Administración
 
-### Configuración de la cuenta administradora en Render
+El panel se encuentra en `/dashboard` y está protegido para los roles autorizados (`admin`, `gerente` o `analista`).
 
-Configurar estas variables en **Environment**:
+- Consulta de las solicitudes registradas y sus detalles.
+- Visualización de los datos de contacto y descripción proporcionados por el cliente.
+- Indicadores de solicitudes totales, recibidas, en proceso y terminadas, además de clientes y especialistas.
+- Asignación de especialistas a las solicitudes.
+- Actualización del estado a Recibida, Aprobada, Rechazada, Asignada, En proceso, Terminada o Cancelada.
+- Consulta de reseñas recientes.
 
-- `ADMIN_EMAIL`: correo que se utilizará como usuario de inicio de sesión (por defecto, `ec037391@gmail.com`).
-- `ADMIN_PASSWORD`: contraseña administrativa de al menos 12 caracteres.
+#### Cuenta administradora
 
-Al iniciar la aplicación, si la contraseña cumple el requisito, la cuenta indicada se crea o se actualiza con rol `admin`. Mantén la contraseña en las variables privadas de Render y no la subas a GitHub.
+Configura estas variables privadas en Render:
 
-### Especialistas ficticios
+- `ADMIN_EMAIL`: correo que se utilizará para iniciar sesión como administrador (el valor predeterminado del código es `ec037391@gmail.com`).
+- `ADMIN_PASSWORD`: contraseña de al menos 12 caracteres.
 
-El sistema activa por defecto ocho perfiles ficticios de demostración, con especialidades en plomería, electricidad, limpieza, jardinería, carpintería, cerrajería, pintura y reparaciones generales. Se crean al inicializar la base de datos y pueden seleccionarse desde el panel para asignar solicitudes.
+Al iniciar la aplicación, si la contraseña cumple el requisito, la cuenta indicada se crea o actualiza con el rol `admin`. No publiques la contraseña en GitHub ni la compartas.
 
-Los perfiles son datos de demostración, no personas ni proveedores verificados. Si no se define `DEMO_SPECIALIST_PASSWORD`, la aplicación genera una contraseña aleatoria no publicada para esas cuentas; para una demostración académica, basta con asignarlas desde el panel administrativo. No reutilizar estos datos en producción.
+#### Especialistas ficticios para demostración
 
-### Correo electrónico
+La inicialización de la aplicación crea ocho perfiles ficticios asignables desde el panel. La función está habilitada por defecto mediante `DEMO_SPECIALISTS_ENABLED=true`.
 
-El envío de correo no está habilitado en esta versión. No se necesita crear una contraseña de aplicación de Gmail ni definir variables SMTP para usar el panel y administrar solicitudes.
+| Nombre de demostración | Especialidades | Experiencia |
+|---|---|---:|
+| Juan López | Plomería, reparaciones generales | 8 años |
+| María Fernanda Soto | Plomería, cerrajería | 5 años |
+| Ana Torres | Electricidad | 9 años |
+| Luis Herrera | Electricidad, reparaciones generales | 6 años |
+| Carlos Ruiz | Limpieza | 7 años |
+| Diana Morales | Limpieza, jardinería | 4 años |
+| Roberto Vázquez | Carpintería, reparaciones generales | 10 años |
+| Sofía Castillo | Pintura, jardinería | 5 años |
+
+Son perfiles ficticios para demostración académica, no proveedores reales ni verificados. Se pueden seleccionar para asignar solicitudes desde el panel administrativo. No es necesario iniciar sesión con esas cuentas para hacer asignaciones desde el panel. Si no se configura una contraseña demo válida, el código genera una contraseña aleatoria que no se publica.
+
+### 5. Asistente de inteligencia artificial
+
+La integración actual utiliza **Groq**, no una llamada directa a la API de OpenAI.
+
+| Componente | Implementación |
+|---|---|
+| Proveedor de inferencia | Groq API |
+| Biblioteca Python | SDK `groq` |
+| Módulo de servicio | `ai_service.py` |
+| Ruta web | `/asistente-ia` |
+| Interfaz | `templates/asistente_ia.html` |
+| Modelo predeterminado | `openai/gpt-oss-20b`, configurable mediante `GROQ_MODEL` |
+
+El prefijo `openai/` es parte del identificador del modelo configurado en Groq; **el proveedor al que se conecta el código es Groq**. La guía anterior del README que pedía `OPENAI_API_KEY`, `OPENAI_MODEL` y el SDK OpenAI estaba desactualizada y queda sustituida por esta configuración.
+
+#### ¿Qué hace el asistente?
+
+- Conversa en español claro, amable y breve.
+- Orienta sobre servicios domésticos: plomería, electricidad, limpieza, pintura, jardinería, carpintería, cerrajería y reparaciones generales.
+- Ayuda al usuario a identificar qué tipo de servicio podría necesitar.
+- Hace preguntas de aclaración cuando faltan datos.
+- Ayuda a preparar o redactar una descripción de la solicitud.
+- Conserva un contexto conversacional corto para responder tomando en cuenta mensajes recientes.
+
+#### ¿Cómo funciona técnicamente?
+
+1. El usuario autenticado abre `/asistente-ia`.
+2. La ruta Flask recibe el mensaje del formulario y valida que no esté vacío ni supere 1,500 caracteres.
+3. Se aplica una espera mínima de dos segundos entre envíos por sesión.
+4. El backend llama a `generate_reply()` en `ai_service.py`.
+5. El módulo crea el cliente de Groq con la clave secreta del entorno, prepara las instrucciones del sistema y hasta los últimos seis mensajes de historial que recibe.
+6. Envía la conversación al modelo configurado y muestra la respuesta en la interfaz.
+7. La sesión conserva un historial breve de los últimos intercambios; no se guarda como historial permanente en la base de datos.
+
+El cliente Groq utiliza un timeout de 20 segundos y un reintento. El texto enviado al modelo se limita y la respuesta se recorta a un máximo de 4,000 caracteres.
+
+#### Instrucciones y límites de seguridad del asistente
+
+Las instrucciones del sistema le indican que:
+
+- No invente precios, disponibilidad, identidades, reseñas ni asignaciones.
+- No afirme consultar la base de datos: el asistente no tiene acceso a los datos actuales de solicitudes ni a la disponibilidad real de especialistas.
+- No dé diagnósticos definitivos ni instrucciones para reparaciones peligrosas.
+- Ante olor a gas, chispas, cables expuestos, riesgo de incendio o peligro inmediato, recomiende alejarse del riesgo y contactar a emergencias o a un profesional calificado.
+- No solicite contraseñas, datos bancarios ni información personal innecesaria.
+- Recuerde al usuario que es una IA y que debe revisar la información antes de actuar.
+
+**La IA no asigna trabajos, no cambia estados, no aprueba ni rechaza solicitudes, no realiza cobros y no modifica la base de datos.** Esas acciones siguen bajo el control de las rutas y permisos de la aplicación.
+
+#### Configuración de IA en Render o local
+
+La función está apagada por defecto. Para habilitarla configura:
+
+```env
+AI_ENABLED=true
+GROQ_API_KEY=tu_clave_secreta_de_groq
+GROQ_MODEL=openai/gpt-oss-20b
+```
+
+- `AI_ENABLED`: debe valer `true` para activar el asistente; por defecto es `false`.
+- `GROQ_API_KEY`: clave privada de Groq. Nunca debe subirse al repositorio.
+- `GROQ_MODEL`: modelo disponible en Groq; si se omite, el código usa `openai/gpt-oss-20b`.
+
+En Render, agrega las variables en **Environment** y guarda los cambios para que el servicio se reinicie. La disponibilidad depende de que la clave sea válida y el modelo esté habilitado en la cuenta. Para desactivar la función establece `AI_ENABLED=false`.
+
+#### Limitaciones conocidas de la IA
+
+- No está conectada a la base de datos ni conoce precios finales, solicitudes, disponibilidad o identidad real de especialistas.
+- No ejecuta acciones en nombre del usuario.
+- El historial es temporal y breve, asociado a la sesión.
+- La espera de dos segundos es una protección básica por sesión, no un sistema robusto de limitación global de peticiones.
+- No reemplaza a un técnico ni debe utilizarse para emergencias o diagnósticos definitivos.
+- Su funcionamiento en producción requiere configurar y probar una clave válida de Groq y activar `AI_ENABLED=true`.
+
+### 6. Otras rutas y utilidades
+
+- `/health`: ejecuta una consulta sencilla a la base de datos y devuelve el estado de conexión.
+- La aplicación inicializa las tablas y los datos básicos de servicios al arrancar mediante `db.create_all()` y `seed_services()`.
+
+## Flujo de una solicitud
+
+1. El cliente consulta el catálogo y elige un servicio.
+2. Completa sus datos, dirección, descripción y fecha preferida.
+3. La aplicación registra la solicitud con estado **Recibida** y crea o identifica la cuenta del cliente.
+4. Administración revisa la solicitud y asigna un especialista.
+5. El especialista consulta el trabajo en su panel y actualiza el estado.
+6. El cliente revisa el seguimiento desde su portal.
+7. Cuando el trabajo está **Terminado**, el cliente puede dejar una reseña.
+
+## Estados de las solicitudes
+
+- **Recibida:** solicitud registrada.
+- **Aprobada:** solicitud aceptada por administración.
+- **Rechazada:** solicitud no aceptada.
+- **Asignada:** se seleccionó un especialista.
+- **En proceso:** trabajo iniciado.
+- **Terminada:** trabajo finalizado; habilita la reseña.
+- **Cancelada:** solicitud cancelada.
+
+## Modelos y base de datos
+
+La implementación activa en `app.py` utiliza los modelos:
+
+- `User`: usuarios, credenciales y roles.
+- `Service`: catálogo de servicios.
+- `ServiceRequest`: solicitudes, cliente, servicio, estado y asignación.
+- `SpecialistProfile`: información profesional y especialidades.
+- `Review`: calificaciones y comentarios asociados a solicitudes.
+
+La aplicación ejecuta `db.create_all()` al iniciar. Esto crea tablas faltantes, pero no sustituye migraciones para cambios de estructura. Antes de modificar una base existente, realiza un respaldo y prueba los cambios en una base separada.
 
 ## Preparación local (Windows PowerShell)
 
-Requiere Python 3.11+ y acceso a una base PostgreSQL o SQLite local.
+Requiere Python 3.11+ y acceso a PostgreSQL o SQLite local.
 
 ```powershell
 git clone https://github.com/EdgarCastanon/Proyecto_ServiHogar.git
@@ -90,21 +224,18 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Edita `.env` y configura `SECRET_KEY` y `DATABASE_URL`. Para desarrollo local puedes usar:
+Edita `.env` y configura al menos `SECRET_KEY` y `DATABASE_URL`. Para desarrollo local puedes usar:
 
 ```env
 SECRET_KEY=pon_aqui_una_clave_aleatoria_larga
 DATABASE_URL=sqlite:///servihogar_local.db
 FLASK_DEBUG=true
+AI_ENABLED=false
 ```
 
-Genera una clave aleatoria con:
+Para usar el asistente localmente, agrega también `GROQ_API_KEY` y `GROQ_MODEL`, y establece `AI_ENABLED=true`.
 
-```powershell
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-Inicia la app:
+Inicia la aplicación:
 
 ```powershell
 python app.py
@@ -114,106 +245,62 @@ Abre http://127.0.0.1:5000. No uses una clave de desarrollo ni `FLASK_DEBUG=true
 
 ## Despliegue en Render
 
-1. Conecta el repositorio y selecciona la rama que hayas probado.
+1. Conecta el repositorio y selecciona la rama `main`.
 2. Tipo de servicio: **Web Service**.
 3. Build command: `pip install -r requirements.txt`.
 4. Start command: `gunicorn app:app`.
-5. Configura `SECRET_KEY` y `DATABASE_URL` desde Environment. No subas el archivo `.env`.
-6. Si usas PostgreSQL externo, confirma host, puerto, base, usuario, contraseña y TLS según las instrucciones del proveedor.
-7. Después del despliegue, abre `/health` y revisa los logs de Render.
+5. Configura `SECRET_KEY` y `DATABASE_URL` desde Environment.
+6. Si deseas habilitar IA, configura también `AI_ENABLED=true`, `GROQ_API_KEY` y opcionalmente `GROQ_MODEL`.
+7. Para el panel, configura `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
+8. Revisa `/health` y los logs de Render después del despliegue.
 
-La aplicación ejecuta `db.create_all()` al iniciar. Esto no reemplaza un sistema de migraciones y no modifica de forma segura todos los cambios futuros de esquema. Haz un respaldo antes de tocar una base con datos reales.
+## Variables de entorno principales
 
-## Base de datos: regla importante
+| Variable | Propósito |
+|---|---|
+| `SECRET_KEY` | Firma de sesiones Flask; debe ser privada y aleatoria. |
+| `DATABASE_URL` | Conexión a PostgreSQL o SQLite. |
+| `AI_ENABLED` | Activa/desactiva el asistente; predeterminado `false`. |
+| `GROQ_API_KEY` | Clave secreta para Groq. |
+| `GROQ_MODEL` | Modelo de Groq; predeterminado `openai/gpt-oss-20b`. |
+| `ADMIN_EMAIL` | Correo de la cuenta administradora. |
+| `ADMIN_PASSWORD` | Contraseña administrativa; mínimo 12 caracteres. |
+| `DEMO_SPECIALISTS_ENABLED` | Activa perfiles ficticios; predeterminado `true`. |
+| `DEMO_SPECIALIST_PASSWORD` | Contraseña opcional de cuentas demo; si no cumple longitud, se genera una aleatoria. |
 
-No borres ni recrees las tablas existentes solo para probar nuevas funciones. Primero:
-1. Identifica el valor real de `DATABASE_URL` sin copiar secretos en chats.
-2. Realiza un respaldo.
-3. Compara las tablas existentes con los modelos activos de `app.py`.
-4. Prueba cambios en una base de pruebas.
-5. Diseña una migración revisada y reversible.
-6. Comprueba clientes, solicitudes, asignaciones y reseñas después de migrar.
+## Funciones que no están habilitadas en esta versión
 
-## Seguridad y cuentas de demostración
+- **Correo electrónico:** el envío de correos no está habilitado. No se necesita SMTP ni contraseña de aplicación de Gmail para utilizar el panel.
+- **Pagos en línea:** no hay pasarela de pago activa.
+- **WhatsApp/SMS:** no hay notificaciones por estos medios.
+- **IA conectada a datos en tiempo real:** el asistente no consulta solicitudes, precios ni disponibilidad.
+- **Verificación documental de especialistas:** los perfiles de demostración son ficticios y el registro de un perfil no equivale a una verificación profesional.
 
-- Nunca guardes contraseñas en texto plano.
-- No permitas que un formulario público cree cuentas de administrador.
-- No publiques credenciales demo compartidas en producción.
-- Las cuentas de prueba deben crearse únicamente en un entorno local o de staging, con contraseñas temporales y datos ficticios.
-- Mantén `.env`, tokens de IA, credenciales de base de datos y certificados fuera de Git.
-- En producción usa HTTPS, una `SECRET_KEY` segura, logs revisados, permisos mínimos y copias de seguridad.
+## Seguridad y mejoras pendientes
 
+- Mantener claves, contraseñas y credenciales fuera de GitHub.
+- Utilizar HTTPS, una `SECRET_KEY` segura, respaldos y permisos mínimos.
+- Reforzar protección CSRF, límites globales de solicitudes y monitoreo.
+- Incorporar migraciones con Flask-Migrate/Alembic.
+- Añadir pruebas automatizadas de rutas, roles, permisos y persistencia.
+- Incorporar verificación y aprobación administrativa de especialistas.
+- Añadir auditoría del historial de estados y recuperación/verificación de cuentas.
+- Para IA, mantener límites de costo, revisar privacidad y probar respuestas y errores del proveedor.
 
-## Cuentas ficticias para pruebas locales
+## Lista de verificación antes de la entrega
 
-Para crear ocho perfiles de especialistas de prueba (datos y correos ficticios), activa explícitamente el modo local:
-
-```powershell
-$env:ENABLE_DEMO_ACCOUNTS="YES_I_AM_LOCAL"
-$env:DEMO_PASSWORD="UnaClaveDePruebaLarga!"
-python seed_demo_specialists.py
-```
-
-Todas las cuentas demo usan la contraseña temporal indicada en `DEMO_PASSWORD`. No uses datos reales ni esta contraseña en producción. El script bloquea su ejecución si detecta variables de entorno de Render o `FLASK_ENV=production`. Tras probar, elimina las cuentas ficticias o la base local.
-
-## Lista de verificación antes de entregar
-
-- [ ] Registro e inicio de sesión válidos e inválidos.
-- [ ] El cliente solo ve sus solicitudes.
-- [ ] El especialista solo ve solicitudes asignadas a su cuenta.
-- [ ] Un especialista no puede asignarse trabajos ni elevar su rol por manipular el formulario.
-- [ ] Los cambios de estado están limitados a transiciones permitidas.
-- [ ] Solo solicitudes terminadas admiten reseña y no se duplica.
-- [ ] Un usuario sin permiso recibe 403.
-- [ ] `/health` responde correctamente en el despliegue.
+- [ ] Registro e inicio de sesión.
+- [ ] El cliente solo consulta sus propias solicitudes.
+- [ ] El especialista solo consulta trabajos asignados a su cuenta.
+- [ ] Administración puede consultar solicitudes y asignar especialistas.
+- [ ] Se pueden actualizar los estados permitidos.
+- [ ] Solo las solicitudes terminadas admiten reseña y no se duplica.
+- [ ] Un usuario sin permisos no puede entrar al panel administrativo.
+- [ ] `/health` responde correctamente.
 - [ ] La interfaz funciona en móvil y escritorio.
-- [ ] Los logs no muestran errores ni secretos.
-- [ ] Se verificó un respaldo y la compatibilidad del esquema real.
-
-## Inteligencia artificial
-
-Consulta la guía paso a paso en [`docs/PLAN_IA.md`](docs/PLAN_IA.md). La integración de un modelo requiere una API key propia configurada como variable secreta, control de costos, validación del contenido y pruebas. Una función basada en reglas o una pantalla de chat no debe presentarse como un modelo de IA conectado.
-
-## Asistente de inteligencia artificial (OpenAI)
-
-Se añadió una primera integración de backend con la Responses API del SDK de OpenAI:
-- `ai_service.py`: llamada al modelo desde el servidor.
-- `/asistente-ia`: ruta protegida para usuarios que hayan iniciado sesión.
-- `templates/asistente_ia.html`: interfaz de conversación.
-- `.env.example`: variables necesarias.
-
-**La función permanece desactivada por defecto** (`AI_ENABLED=false`) y no funcionará hasta que configures una API key válida y habilites la variable. No se incluye ni se debe subir ninguna clave al repositorio.
-
-### Probar localmente
-
-1. Actualiza el repositorio e instala dependencias:
-   ```powershell
-   git pull origin main
-   pip install -r requirements.txt
-   ```
-2. Crea una API key desde la plataforma oficial de OpenAI: https://platform.openai.com/api-keys. La API tiene facturación y límites independientes de una suscripción de ChatGPT; revisa precios y establece límites de gasto antes de probar.
-3. Añade a tu archivo local `.env`:
-   ```env
-   AI_ENABLED=true
-   OPENAI_API_KEY=pega_tu_clave_aqui
-   OPENAI_MODEL=gpt-4.1-mini
-   ```
-4. Reinicia `python app.py`, inicia sesión y abre `/asistente-ia`.
-5. Prueba una pregunta sencilla y confirma que la respuesta se muestra. Si aparece un error, revisa la terminal; no publiques la clave ni logs con secretos.
-
-### Activar en Render
-
-En el servicio web de Render, entra en **Environment** y agrega `AI_ENABLED=true`, `OPENAI_API_KEY` (como valor secreto) y `OPENAI_MODEL=gpt-4.1-mini`. Guarda los cambios y deja que el servicio se reinicie. La disponibilidad del modelo depende de tu cuenta y de la API; si no está habilitado, elige un modelo al que tengas acceso.
-
-### Límites conocidos de la primera versión
-
-- El asistente orienta y ayuda a describir solicitudes; **no consulta la base de datos para verificar precios, disponibilidad o identidades**.
-- El historial conversacional es corto y se conserva en la sesión del navegador, no como historial permanente en la base de datos.
-- Hay una espera básica entre envíos por sesión, pero todavía falta un limitador de frecuencia robusto del lado del servidor, protección CSRF global, monitoreo de consumo y pruebas automatizadas.
-- No debe utilizarse para decisiones de seguridad ni para diagnósticos técnicos definitivos. No introduzcas datos personales innecesarios.
-- La aplicación sigue funcionando con IA desactivada.
-
-Consulta también `docs/PLAN_IA.md` para la hoja de ruta de funciones adicionales.
+- [ ] El asistente IA responde con clave válida y muestra un mensaje útil cuando está desactivado o no configurado.
+- [ ] Los logs no exponen claves ni contraseñas.
+- [ ] Se verificó un respaldo y la compatibilidad del esquema de la base de datos.
 
 ## Licencia
 
