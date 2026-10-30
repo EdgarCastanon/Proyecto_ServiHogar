@@ -119,6 +119,19 @@ No borres ni recrees las tablas existentes solo para probar nuevas funciones. Pr
 - Mantén `.env`, tokens de IA, credenciales de base de datos y certificados fuera de Git.
 - En producción usa HTTPS, una `SECRET_KEY` segura, logs revisados, permisos mínimos y copias de seguridad.
 
+
+## Cuentas ficticias para pruebas locales
+
+Para crear ocho perfiles de especialistas de prueba (datos y correos ficticios), activa explícitamente el modo local:
+
+```powershell
+$env:ENABLE_DEMO_ACCOUNTS="YES_I_AM_LOCAL"
+$env:DEMO_PASSWORD="UnaClaveDePruebaLarga!"
+python seed_demo_specialists.py
+```
+
+Todas las cuentas demo usan la contraseña temporal indicada en `DEMO_PASSWORD`. No uses datos reales ni esta contraseña en producción. El script bloquea su ejecución si detecta variables de entorno de Render o `FLASK_ENV=production`. Tras probar, elimina las cuentas ficticias o la base local.
+
 ## Lista de verificación antes de entregar
 
 - [ ] Registro e inicio de sesión válidos e inválidos.
