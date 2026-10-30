@@ -1,6 +1,8 @@
-"""Servicio de IA de ServiHogar. La API key solo se lee del entorno del servidor."""
+"""Servicio de IA de ServiHogar usando Gemini. La API key solo se lee del entorno del servidor."""
 import os
-from openai import OpenAI
+
+from google import genai
+from google.genai import types
 
 
 SYSTEM_INSTRUCTIONS = """
@@ -21,28 +23,47 @@ Aclara que eres un asistente de IA y que el usuario debe revisar la información
 def generate_reply(message: str, history: list[dict] | None = None) -> str:
     if os.getenv("AI_ENABLED", "false").strip().lower() != "true":
         raise RuntimeError("AI_DISABLED")
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+
+    api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("AI_NOT_CONFIGURED")
 
-    client = OpenAI(api_key=api_key, timeout=20.0, max_retries=1)
-    input_messages = []
+    client = genai.Client(api_key=api_key)
+    contents = []
+
+    # Gemini usa el rol "model" para las respuestas del asistente.
     for item in (history or [])[-6:]:
         role = item.get("role")
         content = item.get("content")
         if role in ("user", "assistant") and isinstance(content, str):
             content = content.strip()[:1000]
             if content:
-                input_messages.append({"role": role, "content": content})
-    input_messages.append({"role": "user", "content": message[:1500]})
+                gemini_role = "user" if role == "user" else "model"
+                contents.append(
+                    types.Content(
+                        role=gemini_role,
+                        parts=[types.Part.from_text(text=content)],
+                    )
+                )
 
-    response = client.responses.create(
-        model=os.getenv("OPENAI_MODEL", "gpt-4.1-mini"),
-        instructions=SYSTEM_INSTRUCTIONS,
-        input=input_messages,
-        max_output_tokens=350,
+    contents.append(
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=message[:1500])],
+        )
     )
-    answer = (response.output_text or "").strip()
+
+    response = client.models.generate_content(
+        model=os.getenv("GEMINI_MODEL", "gemini-3.8-flash"),
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTIONS,
+            max_output_tokens=350,
+            temperature=0.7,
+        ),
+    )
+
+    answer = (response.text or "").strip()
     if not answer:
         raise RuntimeError("AI_EMPTY_RESPONSE")
     return answer[:4000]
