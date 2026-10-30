@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Especialistas | ServiHogar{% endblock %}
+{% block content %}
+<section class="section"><div class="container">
+  <div class="section-heading"><div><span class="eyebrow dark-eyebrow">RED PROFESIONAL</span><h2>Conoce a nuestros<br><em>especialistas.</em></h2></div><p>Los perfiles registrados son informativos. Confirma disponibilidad y validación antes de contratar.</p></div>
+  <div class="service-grid">
+  {% for profile in profiles %}
+    <article class="service-card"><div class="service-card-top"><span class="service-icon">🧰</span><span class="service-number">{{ profile.experience_years }} años</span></div><h3>{{ profile.user.name }}</h3><p><strong>{{ profile.specialties }}</strong></p><p>{{ profile.bio or "Profesional registrado en ServiHogar." }}</p><div class="service-card-bottom"><span>📍 {{ profile.city }}</span></div></article>
+  {% else %}
+    <div class="empty-state"><h2>Estamos ampliando nuestra red</h2><p>Pronto aparecerán perfiles profesionales.</p><a class="btn btn-primary" href="{{ url_for('registro_especialista') }}">Registrar perfil</a></div>
+  {% endfor %}
+  </div>
+</div></section>
+{% endblock %}
