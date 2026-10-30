@@ -16,13 +16,14 @@
     <nav class="nav-links">
       <a href="{{ url_for('index') }}#servicios">Servicios</a>
       <a href="{{ url_for('index') }}#como-funciona">Cómo funciona</a>
+      <a href="{{ url_for('directorio_especialistas') }}">Especialistas</a>
       {% if current_user %}
         {% if current_user.role == 'cliente' %}<a href="{{ url_for('portal') }}">Mis solicitudes</a>{% endif %}
         {% if current_user.role == 'especialista' %}<a href="{{ url_for('especialista') }}">Panel especialista</a>{% endif %}
         {% if current_user.role in ['admin','gerente','analista'] %}<a href="{{ url_for('dashboard') }}">Dashboard</a>{% endif %}
         <span class="user-chip">{{ current_user.name.split(' ')[0] }}</span><a class="btn btn-outline btn-sm" href="{{ url_for('logout') }}">Salir</a>
       {% else %}
-        <a href="{{ url_for('login') }}">Iniciar sesión</a><a class="btn btn-primary btn-sm" href="{{ url_for('quote') }}">Solicitar servicio</a>
+        <a href="{{ url_for('login') }}">Iniciar sesión</a><a href="{{ url_for('registro_especialista') }}">Soy especialista</a><a class="btn btn-primary btn-sm" href="{{ url_for('quote') }}">Solicitar servicio</a>
       {% endif %}
     </nav>
   </div>
