@@ -1,92 +1,142 @@
-# ServiHogar Durango — versión final integrada
+# ServiHogar Durango
 
-Aplicación web Flask para la gestión de solicitudes de servicios domésticos, con interfaz adaptable, autenticación por roles, portal de cliente, panel de especialista, asignación desde dashboard y reseñas.
+Plataforma web académica para conectar clientes con especialistas de servicios domésticos en Durango. Stack actual: Python, Flask, Jinja, SQLAlchemy y PostgreSQL; despliegue previsto/actual en Render y base PostgreSQL configurada mediante variables de entorno.
 
-## Importante antes de desplegar
-- Esta carpeta es una **versión de mejora preparada como paquete independiente** basada en el alcance descrito en la documentación compartida. No incluye las credenciales de tu archivo `.env` original.
-- Revisa y compara con el repositorio del equipo antes de reemplazarlo. No sobrescribas producción sin probar en una rama.
-- No se afirma que Render/Aiven hayan sido probados desde este paquete. Comprueba `/health` después de configurar las variables.
-- Pagos, SMS/WhatsApp y facturación electrónica no están implementados.
+> **Estado del proyecto:** este repositorio contiene funcionalidades implementadas y propuestas de evolución. No marques una función como lista hasta probarla localmente y en el despliegue real. Revisa también el PDF de documentación académica del equipo.
 
-## Funciones incluidas
-- Página de inicio y catálogo de servicios.
-- Formulario de solicitud que guarda en la base de datos.
-- Creación de cuenta de cliente desde la primera solicitud y hash de contraseña.
-- Inicio y cierre de sesión.
-- Portal del cliente para ver solicitudes.
-- Panel de especialista para cambiar estados de solicitudes asignadas.
-- Dashboard de administración/gerencia/analista con métricas, asignación de especialistas y reseñas.
-- Control de acceso por rol en servidor.
-- Endpoint `/health` para revisar la conexión a PostgreSQL.
-- CSS responsive y componentes visuales consistentes.
+## Equipo académico
 
-## Requisitos
-Python 3.11 o superior y PostgreSQL (Aiven para producción).
+- **Castañón Galván Edgar Ailton**
+- **Pulgarin Flores Yosef Enrique**
+- **Ramírez Campos Jesús Alejandro**
 
-## Ejecución local en Windows PowerShell
+Instituto Tecnológico de Durango · Tecnológico Nacional de México  
+Asignatura: Programación / Desarrollo Web · Grupo 8Y, 7.º semestre  
+Docente: Rubén Pizarro Gurrola · Octubre de 2026
+
+## Enlaces
+
+- Repositorio: https://github.com/EdgarCastanon/Proyecto_ServiHogar
+- Aplicación publicada: https://proyecto-servihogar.onrender.com/
+- Documentación técnica y académica: `docs/Documentacion_Final_ServiHogar_APA.pdf`
+
+## Funcionalidad que existe en la implementación Flask actual
+
+- Página pública y catálogo de servicios.
+- Registro de clientes al solicitar un servicio.
+- Inicio y cierre de sesión con contraseñas hasheadas.
+- Portal de cliente e historial de solicitudes.
+- Panel para especialistas con solicitudes asignadas y actualización de estado.
+- Dashboard para los roles internos existentes y asignación manual de especialistas.
+- Reseñas para solicitudes terminadas.
+- Endpoint `/health` para comprobar la conexión a la base de datos.
+- Diseño adaptable en HTML/CSS.
+
+La aplicación principal define los modelos `User`, `Service`, `ServiceRequest` y `Review` directamente en `app.py`. El archivo `models.py` contiene un esquema previo con nombres de tablas diferentes. **No ejecutes scripts antiguos de creación de datos sin comprobar primero sus importaciones y compatibilidad.**
+
+## Evolución propuesta
+
+### Registro y directorio de especialistas
+
+La propuesta amplía el perfil profesional con especialidades, años de experiencia, ciudad y biografía. Un formulario público puede facilitar el alta, pero en un sistema real la cuenta debe quedar pendiente de revisión antes de recibir trabajos. No se debe confiar en los datos declarados ni asignar automáticamente una cuenta no verificada.
+
+### Funciones siguientes recomendadas
+
+1. Verificación y aprobación administrativa de especialistas.
+2. Habilidades normalizadas en una tabla relacionada, en lugar de texto libre.
+3. Disponibilidad por calendario y zonas de cobertura.
+4. Historial de estados y auditoría de quién realizó cada cambio.
+5. Recuperación de contraseña y verificación de correo.
+6. Protección CSRF, límites de intentos de inicio de sesión y validación de entradas.
+7. Migraciones de esquema con Flask-Migrate/Alembic.
+8. Pruebas automatizadas de rutas, roles, permisos y persistencia.
+9. Notificaciones por correo; WhatsApp/SMS y pagos quedan como integraciones posteriores.
+10. Funciones de IA documentadas en `docs/PLAN_IA.md`.
+
+## Preparación local (Windows PowerShell)
+
+Requiere Python 3.11+ y acceso a una base PostgreSQL o SQLite local.
+
 ```powershell
+git clone https://github.com/EdgarCastanon/Proyecto_ServiHogar.git
+cd Proyecto_ServiHogar
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
-Edita `.env` con una `SECRET_KEY` propia y `DATABASE_URL`. Para generar una clave:
+
+Edita `.env` y configura `SECRET_KEY` y `DATABASE_URL`. Para desarrollo local puedes usar:
+
+```env
+SECRET_KEY=pon_aqui_una_clave_aleatoria_larga
+DATABASE_URL=sqlite:///servihogar_local.db
+FLASK_DEBUG=true
+```
+
+Genera una clave aleatoria con:
+
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
-Inicia la aplicación:
+
+Inicia la app:
+
 ```powershell
 python app.py
 ```
-Abre http://127.0.0.1:5000
 
-En desarrollo puedes usar SQLite local cambiando `DATABASE_URL=sqlite:///servihogar_local.db` en `.env`. Para producción usa la URL PostgreSQL de Aiven, con los parámetros TLS que indique Aiven para tu servicio.
+Abre http://127.0.0.1:5000. No uses una clave de desarrollo ni `FLASK_DEBUG=true` en producción.
 
-## Roles
-Los registros nuevos desde el formulario tienen rol `cliente`. Para crear usuarios internos de forma controlada, ejecuta `python crear_usuario.py --nombre "Nombre Apellido" --correo usuario@correo.com --rol especialista` y escribe la contraseña cuando se solicite. Los roles permitidos son `especialista`, `analista`, `gerente` y `admin` (también `cliente`). No publiques credenciales ni habilites registro público de administradores.
+## Despliegue en Render
 
-## GitHub
-1. Descomprime el proyecto.
-2. Copia los archivos a una rama de trabajo del repositorio del equipo.
-3. Confirma que `.env` no se encuentre en Git:
-```bash
-git status
-git add app.py templates static requirements.txt Procfile README.md .env.example .gitignore docs
-git commit -m "Mejora integral de interfaz y flujos de ServiHogar"
-git push origin nombre-de-rama
-```
-Si el repositorio ya existe, conserva su remoto y su historial. No uses `git init` encima de un repositorio existente sin revisar primero.
+1. Conecta el repositorio y selecciona la rama que hayas probado.
+2. Tipo de servicio: **Web Service**.
+3. Build command: `pip install -r requirements.txt`.
+4. Start command: `gunicorn app:app`.
+5. Configura `SECRET_KEY` y `DATABASE_URL` desde Environment. No subas el archivo `.env`.
+6. Si usas PostgreSQL externo, confirma host, puerto, base, usuario, contraseña y TLS según las instrucciones del proveedor.
+7. Después del despliegue, abre `/health` y revisa los logs de Render.
 
-## Render
-- Conecta el repositorio GitHub o selecciona la rama de trabajo.
-- Tipo: Web Service.
-- Build command: `pip install -r requirements.txt`
-- Start command: `gunicorn app:app`
-- Configura `SECRET_KEY` y `DATABASE_URL` en Environment.
-- Configura la URL PostgreSQL de Aiven y los parámetros SSL que Aiven indique.
-- Tras desplegar, visita `/health`. Espera `{"status":"ok","database":"connected"}`.
-- No guardes `.env` ni certificados privados en GitHub. Si Aiven entrega un certificado CA como archivo, usa el mecanismo de Secret Files de Render y configura la URL para utilizarlo, siguiendo las instrucciones vigentes del proveedor.
+La aplicación ejecuta `db.create_all()` al iniciar. Esto no reemplaza un sistema de migraciones y no modifica de forma segura todos los cambios futuros de esquema. Haz un respaldo antes de tocar una base con datos reales.
 
-## Aiven
-- En el servicio PostgreSQL, abre Connection information y copia host, puerto, nombre de base, usuario y contraseña.
-- Descarga/usa el certificado CA indicado por Aiven si la configuración de conexión lo requiere.
-- Configura la URL en Render como variable secreta. No pegues contraseñas en el repositorio ni en capturas.
-- Haz una prueba de conexión con `/health`.
-- Haz una copia de seguridad antes de aplicar cambios a una base de datos con información real.
+## Base de datos: regla importante
 
-## Lista de pruebas manuales
-- [ ] Inicio carga sin error.
-- [ ] Catálogo muestra los servicios.
-- [ ] Formulario valida campos y crea una solicitud.
-- [ ] Cliente inicia sesión y ve solo sus solicitudes.
-- [ ] Especialista ve sus solicitudes asignadas y cambia estado.
-- [ ] Administrador/gerente/analista accede al dashboard.
-- [ ] Dashboard asigna un especialista válido.
-- [ ] Solo se permite reseñar una solicitud terminada.
-- [ ] Usuario sin permisos recibe 403.
-- [ ] `/health` devuelve estado correcto en producción.
-- [ ] Diseño probado en escritorio y móvil.
-- [ ] Logs de Render revisados y no hay errores de conexión.
+No borres ni recrees las tablas existentes solo para probar nuevas funciones. Primero:
+1. Identifica el valor real de `DATABASE_URL` sin copiar secretos en chats.
+2. Realiza un respaldo.
+3. Compara las tablas existentes con los modelos activos de `app.py`.
+4. Prueba cambios en una base de pruebas.
+5. Diseña una migración revisada y reversible.
+6. Comprueba clientes, solicitudes, asignaciones y reseñas después de migrar.
 
-## Limitaciones y trabajo pendiente
-Este paquete no importa datos existentes ni migra automáticamente el esquema de una base de datos anterior. La creación de tablas se realiza con `db.create_all()`, adecuado para un prototipo, pero una actualización de producción debe usar migraciones revisadas. Antes de entregar, el equipo debe ejecutar pruebas reales, verificar el flujo completo con cuentas de cada rol y capturar evidencias de la aplicación desplegada.
+## Seguridad y cuentas de demostración
+
+- Nunca guardes contraseñas en texto plano.
+- No permitas que un formulario público cree cuentas de administrador.
+- No publiques credenciales demo compartidas en producción.
+- Las cuentas de prueba deben crearse únicamente en un entorno local o de staging, con contraseñas temporales y datos ficticios.
+- Mantén `.env`, tokens de IA, credenciales de base de datos y certificados fuera de Git.
+- En producción usa HTTPS, una `SECRET_KEY` segura, logs revisados, permisos mínimos y copias de seguridad.
+
+## Lista de verificación antes de entregar
+
+- [ ] Registro e inicio de sesión válidos e inválidos.
+- [ ] El cliente solo ve sus solicitudes.
+- [ ] El especialista solo ve solicitudes asignadas a su cuenta.
+- [ ] Un especialista no puede asignarse trabajos ni elevar su rol por manipular el formulario.
+- [ ] Los cambios de estado están limitados a transiciones permitidas.
+- [ ] Solo solicitudes terminadas admiten reseña y no se duplica.
+- [ ] Un usuario sin permiso recibe 403.
+- [ ] `/health` responde correctamente en el despliegue.
+- [ ] La interfaz funciona en móvil y escritorio.
+- [ ] Los logs no muestran errores ni secretos.
+- [ ] Se verificó un respaldo y la compatibilidad del esquema real.
+
+## Inteligencia artificial
+
+Consulta la guía paso a paso en [`docs/PLAN_IA.md`](docs/PLAN_IA.md). La integración de un modelo requiere una API key propia configurada como variable secreta, control de costos, validación del contenido y pruebas. Una función basada en reglas o una pantalla de chat no debe presentarse como un modelo de IA conectado.
+
+## Licencia
+
+Proyecto académico. Añade una licencia formal si el equipo decide distribuir el código bajo términos específicos.
