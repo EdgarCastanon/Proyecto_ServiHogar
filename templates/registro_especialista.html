@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Registro de especialista | ServiHogar{% endblock %}
+{% block content %}
+<section class="form-page"><div class="container login-layout">
+  <div class="login-side"><span class="eyebrow">ÚNETE A LA RED PROFESIONAL</span><h1>Tu experiencia<br><em>abre puertas.</em></h1><p>Crea tu perfil para que el equipo de ServiHogar pueda conocer tus especialidades. El registro no garantiza la aprobación ni la asignación automática de trabajos.</p></div>
+  <form class="form-card" method="post">
+    <div class="form-card-heading"><span class="step-label">PERFIL PROFESIONAL</span><h2>Crear cuenta de especialista</h2><p>Todos los campos marcados son obligatorios.</p></div>
+    <label>Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label>
+    <label>Correo electrónico<input type="email" name="email" required maxlength="180" autocomplete="email"></label>
+    <label>Teléfono<input name="phone" required maxlength="30" autocomplete="tel"></label>
+    <label>Contraseña (mínimo 10 caracteres)<input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
+    <fieldset><legend>Especialidades (elige al menos una)</legend>
+      {% for item in ["Plomería","Electricidad","Limpieza","Pintura","Jardinería","Carpintería","Cerrajería","Reparaciones generales"] %}
+      <label class="checkbox-row"><input type="checkbox" name="specialties" value="{{ item }}"> {{ item }}</label>
+      {% endfor %}
+    </fieldset>
+    <label>Años de experiencia<input type="number" name="experience_years" min="0" max="60" value="0" required></label>
+    <label>Ciudad o zona de cobertura<input name="city" value="Durango, Durango" maxlength="100" required></label>
+    <label>Presentación profesional<textarea name="bio" maxlength="600" rows="4" placeholder="Experiencia, certificaciones o tipos de trabajo que realizas. No incluyas datos sensibles."></textarea></label>
+    <button class="btn btn-primary btn-wide" type="submit">Crear cuenta <span>↗</span></button>
+    <p class="form-note">¿Ya tienes cuenta? <a href="{{ url_for('login') }}">Inicia sesión.</a></p>
+  </form>
+</div></section>
+{% endblock %}
