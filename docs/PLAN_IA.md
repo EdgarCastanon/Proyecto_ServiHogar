@@ -1,6 +1,8 @@
 # Plan de integración de IA en ServiHogar Durango
 
-Este documento separa ideas de implementación futura de las funciones que ya están conectadas. La aplicación actual es Flask/Jinja/SQLAlchemy; no debe afirmarse que tiene IA hasta conectar y probar un proveedor/modelo real.
+## Estado actual de la integración
+
+Se añadió una primera implementación de asistente con el SDK de OpenAI y Responses API: `ai_service.py`, la ruta autenticada `/asistente-ia` y la plantilla `templates/asistente_ia.html`. La integración requiere instalar dependencias, configurar `OPENAI_API_KEY` en el servidor y activar `AI_ENABLED=true`. Por defecto permanece apagada. No se considera verificada en producción hasta ejecutar pruebas con una clave válida. Esta primera versión no consulta la base de datos ni conoce disponibilidad, precios reales o perfiles concretos.
 
 ## Funciones de IA con valor práctico
 
