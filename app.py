@@ -50,6 +50,18 @@ class ServiceRequest(db.Model):
     service = db.relationship("Service")
     specialist = db.relationship("User", foreign_keys=[specialist_id])
 
+
+class SpecialistProfile(db.Model):
+    """Información pública opcional para especialistas; se almacena aparte para no romper usuarios existentes."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False, index=True)
+    specialties = db.Column(db.String(300), nullable=False)
+    experience_years = db.Column(db.Integer, nullable=False, default=0)
+    city = db.Column(db.String(100), nullable=False, default="Durango, Durango")
+    bio = db.Column(db.String(600), nullable=False, default="")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    user = db.relationship("User", backref=db.backref("specialist_profile", uselist=False))
+
 class Review(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     request_id = db.Column(db.Integer, db.ForeignKey("service_request.id"), nullable=False, unique=True)
@@ -132,6 +144,52 @@ def quote():
         flash(f"Solicitud #{req.id} registrada correctamente.", "success")
         return redirect(url_for("portal"))
     return render_template("cotizar.html", services=services)
+
+
+@app.route("/registro-especialista", methods=["GET", "POST"])
+def registro_especialista():
+    """Registro público de especialistas. En producción debe añadirse verificación documental."""
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+        password = request.form.get("password", "")
+        specialties = request.form.getlist("specialties")
+        experience = request.form.get("experience_years", type=int)
+        city = request.form.get("city", "Durango, Durango").strip()
+        bio = request.form.get("bio", "").strip()
+        allowed = {"Plomería", "Electricidad", "Limpieza", "Pintura", "Jardinería", "Carpintería", "Cerrajería", "Reparaciones generales"}
+        specialties = [item for item in specialties if item in allowed]
+        if not all([name, email, password, phone, city]) or not specialties:
+            flash("Completa los datos obligatorios y selecciona al menos una especialidad.", "danger")
+            return render_template("registro_especialista.html")
+        if len(password) < 10:
+            flash("Usa una contraseña de al menos 10 caracteres.", "danger")
+            return render_template("registro_especialista.html")
+        if experience is None or not 0 <= experience <= 60:
+            flash("Indica años de experiencia entre 0 y 60.", "danger")
+            return render_template("registro_especialista.html")
+        if User.query.filter_by(email=email).first():
+            flash("Ya existe una cuenta con ese correo. Inicia sesión o usa otro correo.", "warning")
+            return render_template("registro_especialista.html")
+        user = User(name=name, email=email, phone=phone,
+                    password_hash=generate_password_hash(password), role="especialista")
+        db.session.add(user)
+        db.session.flush()
+        profile = SpecialistProfile(user_id=user.id, specialties=", ".join(specialties),
+                                     experience_years=experience, city=city, bio=bio[:600])
+        db.session.add(profile)
+        db.session.commit()
+        flash("Cuenta de especialista creada. Tu perfil ya puede ser revisado por el equipo.", "success")
+        return redirect(url_for("login"))
+    return render_template("registro_especialista.html")
+
+@app.route("/especialistas")
+def directorio_especialistas():
+    profiles = SpecialistProfile.query.join(User).filter(User.role == "especialista").order_by(
+        SpecialistProfile.experience_years.desc(), User.name.asc()
+    ).all()
+    return render_template("directorio_especialistas.html", profiles=profiles)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
