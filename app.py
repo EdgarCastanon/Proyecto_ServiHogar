@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime
 from functools import wraps
 from urllib.parse import urlparse
@@ -383,8 +384,11 @@ def seed_demo_accounts():
             admin.role = "admin"
             admin.password_hash = generate_password_hash(admin_password)
 
-    if os.getenv("DEMO_SPECIALISTS_ENABLED", "false").strip().lower() == "true":
-        demo_password = os.getenv("DEMO_SPECIALIST_PASSWORD", "")
+    if os.getenv("DEMO_SPECIALISTS_ENABLED", "true").strip().lower() == "true":
+        demo_password = os.getenv("DEMO_SPECIALIST_PASSWORD", "").strip()
+        if len(demo_password) < 12:
+            # Las cuentas ficticias son asignables desde el panel; sus accesos no se publican.
+            demo_password = secrets.token_urlsafe(24)
         demo = [
             ("Juan López", "demo.plomeria1@servihogar.test", "Plomería, Reparaciones generales", 8, "Mantenimiento de tuberías y fugas."),
             ("María Fernanda Soto", "demo.plomeria2@servihogar.test", "Plomería, Cerrajería", 5, "Reparaciones domésticas y mantenimiento."),
@@ -395,8 +399,7 @@ def seed_demo_accounts():
             ("Roberto Vázquez", "demo.carpinteria@servihogar.test", "Carpintería, Reparaciones generales", 10, "Muebles, puertas y reparaciones."),
             ("Sofía Castillo", "demo.pintura@servihogar.test", "Pintura, Jardinería", 5, "Pintura interior y mantenimiento exterior."),
         ]
-        if len(demo_password) >= 12:
-            for name, email, specialties, years, bio in demo:
+        for name, email, specialties, years, bio in demo:
                 user = User.query.filter_by(email=email).first()
                 if user is None:
                     user = User(name=name, email=email, phone="6180000000",
@@ -406,8 +409,6 @@ def seed_demo_accounts():
                 if not SpecialistProfile.query.filter_by(user_id=user.id).first():
                     db.session.add(SpecialistProfile(user_id=user.id, specialties=specialties,
                                                      experience_years=years, city="Durango, Durango", bio=bio))
-        else:
-            app.logger.warning("Configura DEMO_SPECIALIST_PASSWORD con al menos 12 caracteres.")
     db.session.commit()
 
 with app.app_context():
