@@ -377,8 +377,11 @@ def seed_demo_accounts():
         if admin is None:
             db.session.add(User(name="Administrador ServiHogar", email=admin_email,
                                 password_hash=generate_password_hash(admin_password), role="admin"))
-        elif admin.role != "admin":
-            app.logger.warning("ADMIN_EMAIL ya existe con un rol distinto; no se modificó por seguridad.")
+        else:
+            # La cuenta indicada como ADMIN_EMAIL se reserva para el panel administrativo.
+            admin.name = "Administrador ServiHogar"
+            admin.role = "admin"
+            admin.password_hash = generate_password_hash(admin_password)
 
     if os.getenv("DEMO_SPECIALISTS_ENABLED", "false").strip().lower() == "true":
         demo_password = os.getenv("DEMO_SPECIALIST_PASSWORD", "")
