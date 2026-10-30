@@ -27,7 +27,7 @@ Docente: Rubén Pizarro Gurrola · Octubre de 2026
 - Inicio y cierre de sesión con contraseñas hasheadas.
 - Portal de cliente e historial de solicitudes.
 - Panel para especialistas con solicitudes asignadas y actualización de estado.
-- Dashboard para los roles internos existentes y asignación manual de especialistas.
+- Panel administrativo para consultar todas las solicitudes, revisar datos del cliente, asignar especialistas y actualizar el estado de cada solicitud.
 - Reseñas para solicitudes terminadas.
 - Endpoint `/health` para comprobar la conexión a la base de datos.
 - Servicio backend de IA en `ai_service.py`, ruta autenticada `/asistente-ia` e interfaz `templates/asistente_ia.html` (requiere API key y activación por entorno).
@@ -53,6 +53,29 @@ La propuesta amplía el perfil profesional con especialidades, años de experien
 8. Pruebas automatizadas de rutas, roles, permisos y persistencia.
 9. Notificaciones por correo; WhatsApp/SMS y pagos quedan como integraciones posteriores.
 10. Funciones de IA documentadas en `docs/PLAN_IA.md`.
+
+## Panel administrativo y datos de demostración
+
+El panel administrativo está disponible en `/dashboard` para usuarios con rol `admin`, `gerente` o `analista`. Permite ver las solicitudes registradas, consultar los datos de contacto y descripción, asignar un especialista y actualizar el estado a Recibida, Aprobada, Rechazada, Asignada, En proceso, Terminada o Cancelada.
+
+### Configuración de la cuenta administradora en Render
+
+Configurar estas variables en **Environment**:
+
+- `ADMIN_EMAIL`: correo que se utilizará como usuario de inicio de sesión (por defecto, `ec037391@gmail.com`).
+- `ADMIN_PASSWORD`: contraseña administrativa de al menos 12 caracteres.
+
+Al iniciar la aplicación, si la contraseña cumple el requisito, la cuenta indicada se crea o se actualiza con rol `admin`. Mantén la contraseña en las variables privadas de Render y no la subas a GitHub.
+
+### Especialistas ficticios
+
+El sistema activa por defecto ocho perfiles ficticios de demostración, con especialidades en plomería, electricidad, limpieza, jardinería, carpintería, cerrajería, pintura y reparaciones generales. Se crean al inicializar la base de datos y pueden seleccionarse desde el panel para asignar solicitudes.
+
+Los perfiles son datos de demostración, no personas ni proveedores verificados. Si no se define `DEMO_SPECIALIST_PASSWORD`, la aplicación genera una contraseña aleatoria no publicada para esas cuentas; para una demostración académica, basta con asignarlas desde el panel administrativo. No reutilizar estos datos en producción.
+
+### Correo electrónico
+
+El envío de correo no está habilitado en esta versión. No se necesita crear una contraseña de aplicación de Gmail ni definir variables SMTP para usar el panel y administrar solicitudes.
 
 ## Preparación local (Windows PowerShell)
 
