@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
+from ai_service import generate_reply
+import time
 
 load_dotenv()
 app = Flask(__name__)
@@ -290,6 +292,43 @@ def dashboard():
     }
     reviews = Review.query.order_by(Review.created_at.desc()).limit(8).all()
     return render_template("dashboard.html", requests_list=all_requests, specialists=specialists, counts=counts, reviews=reviews)
+
+@app.route("/asistente-ia", methods=["GET", "POST"])
+@login_required
+def asistente_ia():
+    """Asistente conversacional; solo usuarios autenticados para limitar abuso."""
+    history = session.get("servihogar_ai_history", [])
+    error_message = None
+    if request.method == "POST":
+        message = request.form.get("message", "").strip()
+        now = time.time()
+        last_request = session.get("servihogar_ai_last_request", 0)
+        if now - last_request < 2:
+            error_message = "Espera un momento antes de enviar otro mensaje."
+        elif not message:
+            error_message = "Escribe una pregunta para continuar."
+        elif len(message) > 1500:
+            error_message = "Tu mensaje es demasiado largo. Usa máximo 1500 caracteres."
+        else:
+            session["servihogar_ai_last_request"] = now
+            history = history[-4:]
+            try:
+                answer = generate_reply(message, history)
+                history.extend([
+                    {"role": "user", "content": message[:350]},
+                    {"role": "assistant", "content": answer[:350]},
+                ])
+                session["servihogar_ai_history"] = history[-4:]
+            except RuntimeError as exc:
+                if str(exc) == "AI_DISABLED":
+                    error_message = "El asistente de IA está temporalmente desactivado. Puedes seguir usando ServiHogar normalmente."
+                else:
+                    error_message = "El asistente no está configurado correctamente. Inténtalo más tarde."
+            except Exception:
+                app.logger.exception("Fallo al consultar el asistente de IA")
+                error_message = "No pudimos conectar con el asistente en este momento. Inténtalo más tarde."
+    return render_template("asistente_ia.html", history=history, error_message=error_message)
+
 
 @app.route("/health")
 def health():
