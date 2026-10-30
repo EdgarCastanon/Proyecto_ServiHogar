@@ -1,6 +1,4 @@
 import os
-import smtplib
-from email.message import EmailMessage
 from datetime import datetime
 from functools import wraps
 from urllib.parse import urlparse
@@ -23,64 +21,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 if database_url.startswith("postgresql"):
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
 db = SQLAlchemy(app)
-
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "ec037391@gmail.com").strip().lower()
-
-
-def send_email(to_email, subject, body):
-    """Envía correo por Gmail SMTP; un fallo de correo no elimina la solicitud."""
-    username = os.getenv("MAIL_USERNAME", "").strip()
-    app_password = os.getenv("MAIL_APP_PASSWORD", "").replace(" ", "").strip()
-    if not username or not app_password:
-        app.logger.warning("Correo no configurado; se omitió el envío a %s.", to_email)
-        return False
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = f"ServiHogar Durango <{username}>"
-    message["To"] = to_email
-    message.set_content(body)
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
-            smtp.login(username, app_password)
-            smtp.send_message(message)
-        return True
-    except Exception:
-        app.logger.exception("No fue posible enviar correo a %s.", to_email)
-        return False
-
-
-def notify_quote(req, customer, service, is_new_account=False):
-    customer_body = (
-        f"Hola {customer.name},\n\nRecibimos tu solicitud de {service.name}.\n"
-        f"Folio: #{req.id}\nEstado: Recibida\nDescripción: {req.details}\n"
-        f"Dirección: {req.address}\n\nNuestro equipo revisará la información y te notificará "
-        "cuando haya una actualización. Gracias por confiar en ServiHogar Durango."
-    )
-    send_email(customer.email, f"Recibimos tu solicitud #{req.id} - ServiHogar", customer_body)
-    admin_body = (
-        f"Nueva cotización en ServiHogar.\nFolio: #{req.id}\nCliente: {customer.name}\n"
-        f"Correo: {customer.email}\nTeléfono: {customer.phone or 'No proporcionado'}\n"
-        f"Servicio: {service.name}\nDirección: {req.address}\n"
-        f"Fecha preferida: {req.preferred_date or 'No indicada'}\nDescripción: {req.details}\n\n"
-        "Ingresa al panel administrativo para revisar y gestionar esta solicitud."
-    )
-    send_email(ADMIN_EMAIL, f"Nueva cotización #{req.id} - ServiHogar", admin_body)
-    if is_new_account:
-        send_email(customer.email, "Bienvenido a ServiHogar Durango",
-                   f"Hola {customer.name}, tu cuenta fue creada correctamente. Ya puedes iniciar sesión y consultar tus solicitudes.")
-
-
-def notify_status_change(req, status, note=""):
-    customer = req.customer
-    specialist_name = req.specialist.name if req.specialist else "Por asignar"
-    body = (
-        f"Hola {customer.name},\n\nLa solicitud #{req.id} de {req.service.name} "
-        f"ha cambiado de estado.\nNuevo estado: {status}\nEspecialista: {specialist_name}\n"
-        f"Mensaje de ServiHogar: {note or 'Consulta tu portal para conocer el seguimiento.'}\n\n"
-        "Gracias por confiar en ServiHogar Durango."
-    )
-    send_email(customer.email, f"Actualización de solicitud #{req.id} - ServiHogar", body)
-
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -190,7 +130,6 @@ def quote():
         if user and not session.get("user_id"):
             flash("Ese correo ya tiene una cuenta. Inicia sesión para solicitar el servicio.", "warning")
             return redirect(url_for("login"))
-        is_new_account = user is None
         if not user:
             user = User(name=name, email=email, phone=phone,
                         password_hash=generate_password_hash(password), role="cliente")
@@ -204,8 +143,7 @@ def quote():
         db.session.add(req)
         db.session.commit()
         session["user_id"] = user.id
-        notify_quote(req, user, service, is_new_account=is_new_account)
-        flash(f"Solicitud #{req.id} registrada correctamente. Te enviaremos una confirmación por correo si el servicio está configurado.", "success")
+        flash(f"Solicitud #{req.id} registrada correctamente. Ya puedes consultar el seguimiento desde tu cuenta.", "success")
         return redirect(url_for("portal"))
     return render_template("cotizar.html", services=services)
 
@@ -336,13 +274,11 @@ def dashboard():
             abort(404)
         if action == "status":
             new_status = request.form.get("status", "")
-            note = request.form.get("admin_note", "").strip()[:1000]
             if new_status not in ("Aprobada", "Rechazada", "En proceso", "Terminada", "Cancelada"):
                 abort(400)
             req.status = new_status
             db.session.commit()
-            notify_status_change(req, new_status, note)
-            flash(f"Solicitud #{req.id} actualizada; se notificará al cliente si el correo está configurado.", "success")
+            flash(f"Solicitud #{req.id} actualizada correctamente.", "success")
         else:
             specialist_id = request.form.get("specialist_id", type=int)
             specialist = User.query.filter_by(id=specialist_id, role="especialista").first()
@@ -469,11 +405,13 @@ def seed_demo_accounts():
                                                      experience_years=years, city="Durango, Durango", bio=bio))
         else:
             app.logger.warning("Configura DEMO_SPECIALIST_PASSWORD con al menos 12 caracteres.")
+    db.session.commit()
 
 with app.app_context():
     try:
         db.create_all()
         seed_services()
+        seed_demo_accounts()
     except Exception:
         app.logger.exception("No fue posible inicializar la base de datos. Revisa DATABASE_URL.")
 
